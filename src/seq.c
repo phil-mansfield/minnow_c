@@ -21,9 +21,10 @@ ExSeq ExSeq_New(int32_t len) {
 
     /* The last four bytes are used to store the reference counter. */
     s.Data = malloc(len*sizeof(*s.Data) + 4);
+    AssertAlloc(s.Data);
+
     memset(s.Data, 0, len*sizeof(*s.Data) + 4);
 
-    AssertAlloc(s.Data);
     return s;
 }
 
@@ -42,11 +43,11 @@ ExSeq ExSeq_FromArray(Example *data, int32_t len) {
 
 ExSeq ExSeq_NewWithCap(int32_t len, int32_t cap) {
     DebugAssert(len >= 0) {
-        Panic("ExSeq_NewWithCap given negative length %"PRId32".", len);
+        Panic("ExSeq_NewWithCap given negative length, %"PRId32".", len);
     }
     DebugAssert(cap >= len) {
-        Panic("ExSeq_NewWithCap given cap %"PRId32
-              " smaller than length %"PRId32".", cap, len);
+        Panic("ExSeq_NewWithCap given cap, %"PRId32
+              ", smaller than length, %"PRId32".", cap, len);
     }
 
     ExSeq s = ExSeq_New(cap);
