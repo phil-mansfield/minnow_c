@@ -130,8 +130,8 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
 
 
     int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
-    if (!refPtr) { return s; }
+    if (!refPtr) { return sub; }
     (*refPtr)++;
 
-    return s;
+    return sub;
 }
