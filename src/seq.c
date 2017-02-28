@@ -7,18 +7,6 @@
 
 #define ALPHA 1.25
 
-/********************/
-/* Helper Functions */
-/********************/
-
-/* `referenceCounterPointer` returns a pointer to the reference counter
- * for a sequence. Returns NULL if the sequence is too small to have
- * a reference counter.
- */
-int32_t *referenceCounterPointer(ExSeq s, size_t elemSize) {
-    return (int32_t*)(((char*)s.Data) + ((size_t) s.Cap)*elemSize);
-}
-
 /**********************/
 /* Exported Functions */
 /**********************/
@@ -67,7 +55,7 @@ ExSeq ExSeq_NewWithCap(int32_t len, int32_t cap) {
 }
 
 void ExSeq_Deref(ExSeq s) {
-    int32_t *refPtr = referenceCounterPointer(s, sizeof(*s.Data));
+    int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
     if (!refPtr || !*refPtr) {
         ExSeq_Free(s);
         return;
@@ -83,7 +71,7 @@ void ExSeq_Free(ExSeq s) {
 
 ExSeq ExSeq_Append(ExSeq s, Example tail) {
     if (s.Len == s.Cap) {
-        int32_t *refPtr = referenceCounterPointer(s, sizeof(*s.Data));
+        int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
         DebugAssert(!refPtr || *refPtr > 0) {
             Panic("%"PRId32" living references pointing to s1 in "
                   "to ExSeq_Join.", *refPtr);
@@ -103,7 +91,7 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
 
 ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
     if (s1.Len + s2.Len  > s1.Cap) {
-        int32_t *refPtr = referenceCounterPointer(s1, sizeof(*s1.Data));
+        int32_t *refPtr = (int32_t*)(s1.Data + s1.Cap);
         DebugAssert(!refPtr || *refPtr > 0) {
             Panic("%"PRId32" living references pointing to s1 in "
                   "to ExSeq_Join.", *refPtr);
@@ -140,7 +128,7 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
     sub.Cap = s.Cap - start;
 
 
-    int32_t *refPtr = referenceCounterPointer(s, sizeof(*s.Data));
+    int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
     if (!refPtr) { return s; }
     (*refPtr)++;
 
