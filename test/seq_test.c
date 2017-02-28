@@ -107,7 +107,8 @@ bool testNewWithCap() {
 bool testFromArray() {
     bool res = true;
 
-    struct { int32_t len; Example data[8]; } tests[3] = {
+    struct { int32_t len; Example data[8]; } tests[4] = {
+        //{-1, {3}},
         {0, {}},
         {1, {3}},
         {8, {1, 2, 3, 4, 5, 6, 7, 8}}
@@ -117,15 +118,23 @@ bool testFromArray() {
         ExSeq s = ExSeq_FromArray(tests[i].data, tests[i].len);
         
         if (s.Len != tests[i].len || s.Cap != tests[i].len) {
+            res = false;
             fprintf(stderr, "Expected test %d in testFromArray() to"
                     "return {Len: %"PRId32", Cap: %"PRId32"}.\n",
                     i, s.Len, s.Cap);
         }
+        if (refCount(s) != 0) {
+            res = false;
+            fprintf(stderr, "Expected ref count = 0 for new seqeunce, got %"
+                    PRId32".\n", refCount(s));
+        }
         for (int32_t j = 0; j < s.Len; j++) {
             if (s.Data[j] != tests[i].data[j]) {
+                res = false;
                 fprintf(stderr, "Element %"PRId32" of test %d in "
                         "testFromArray() is %g, not %g.\n", j, i,
                         s.Data[j], tests[i].data[j]);
+                break;
             }
         }
 
