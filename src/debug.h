@@ -34,23 +34,28 @@
  */
 #define AssertAlloc(ptr) \
     do { \
-        ASSERT(ptr) { \
+        Assert(ptr) {                                            \
             fprintf(stderr, "%s: %s: L%d: Allocation failed\n.", \
                     __FILE__, __FUNCTION__, __LINE__);           \
             exit(1); \
         } \
     } while(0)
 
-/* `DebugAssert` and `DebugPrintf` are `Assert` and `printf` statements
+/* `UcheckedDebugAssert` and `DebugPrintf` are `Assert` and `printf` statements
  * (respectively), which only run if the `DEBUG` flag is set at compile time.
- * They are otherwise identical.
+ * They are otherwise identical. `DebugAssert` acts like an `Assert` during
+ * debug mode and like a standard assert otherwise. This should be used if
+ * you're worried about the code contained within the assert block being large
+ * enough to prevent a function from being inlined.
  */
 #ifdef DEBUG
-#define DebugAssert(x) assert(Assert)
+#define DebugAssert(x) Assert(x)
 #define DebugPrintf(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#define UncheckedDebugAssert(x) Assert(x)
 #else /* !DEBUG */
-#define DebugAssert(expr)
+#define DebugAssert(x) assert(x); if(0)
 #define DebugPrintf(fmt, ...)
+#define UncheckedDebugAssert(x)
 #endif /* DEBUG */
 
 /* Panic crashes the program and prints out descriptive information. On some
@@ -65,6 +70,7 @@
         fprintf(stderr, "Panic at file %s, function %s, line %d:\n", \
                 __FILE__, __FUNCTION__, __LINE__);               \
         fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fprintf(stderr, "\n"); \
         fprintf(stderr, "Stack trace:\n"); \
         void **panicStackframes_ = calloc(100, sizeof(*panicStackframes_)); \
         size_t panicSize_ = backtrace(panicStackframes_, 100); \
@@ -81,6 +87,7 @@
     do { \
         fprintf(stderr, "%s:%s:L%d:\n", __FILE__, __FUNCTION__, __LINE__); \
         fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fprintf(stderr, "\n"); \
         exit(1); \
     } while (0)
 #endif /* __GNUC__ || __linux__ */
