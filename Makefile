@@ -10,6 +10,8 @@
 # Go to the other commented areas in this file and do what they say.
 
 CC=gcc
+#CC=clang
+#CC=icc
 CFLAGS=-O2 -Wall -Wextra -Werror -std=c99 -g -D DEBUG
 
 SOURCES=$(wildcard src/*.c)
