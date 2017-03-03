@@ -73,7 +73,7 @@ void ExSeq_Free(ExSeq s) {
 ExSeq ExSeq_Append(ExSeq s, Example tail) {
     if (s.Len == s.Cap) {
         int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
-        DebugAssert(!refPtr || *refPtr > 0) {
+        DebugAssert(!s.Data || *refPtr == 0) {
             Panic("%"PRId32" living references pointing to s1 in "
                   "to ExSeq_Join.", *refPtr);
         }
@@ -81,7 +81,7 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
         s.Cap = (int32_t) (ALPHA * (float) (1 + s.Cap));
         s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4);
         /* Also resets the reference counter. */
-        memset(s.Data + s.Len, 0, s.Cap - s.Len + 4);
+        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
     }
 
     s.Data[s.Len] = tail;
@@ -93,7 +93,7 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
 ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
     if (s1.Len + s2.Len  > s1.Cap) {
         int32_t *refPtr = (int32_t*)(s1.Data + s1.Cap);
-        DebugAssert(!refPtr || *refPtr > 0) {
+        DebugAssert(!refPtr || *refPtr == 0) {
             Panic("%"PRId32" living references pointing to s1 in "
                   "to ExSeq_Join.", *refPtr);
         }
@@ -118,7 +118,7 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
         Panic("ExSeq_Sub given start index, %"PRId32
               " which is smaller than end index %"PRId32".", start, end);
     }
-    DebugAssert(end > s.Cap) {
+    DebugAssert(end <= s.Cap) {
         Panic("ExSeq_Sub given end index, %"PRId32
               " which is larger than cap %"PRId32".", end, s.Cap);
     }
