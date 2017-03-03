@@ -54,9 +54,13 @@ debug_test: test
 build:
 	mkdir -p build/
 
+src/base_seq.h: scripts/seq_gen.py Makefile
+	python scripts/seq_gen.py c < resources/seq_base.c > src/base_seq.c
+	python scripts/seq_gen.py h < resources/seq_base.h > src/base_seq.h
+
 # Change this as needed for each object file. List dependencies that are
 # not the corresponding .c and .h file.
-tmp.o:
+src/seq.o: src/base_seq.h
 %.o: %.c %.h Makefile
 	$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDES_WITH_FLAG)
 
@@ -83,3 +87,4 @@ clean:
 	rm -f  test/*_test
 	rm -f  test/*_bench
 	rm -rf test/*.dSYM
+	rm -f  src/seq_base.*

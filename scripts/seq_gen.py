@@ -45,7 +45,7 @@ def main():
 
     print()
     if mode == "h":
-        print("#define GENERATE_SEQ_HEADER(type, sqeType) \\")
+        print("#define GENERATE_SEQ_HEADER(type, seqType) \\")
     elif mode == "c":
         print("#define GENERATE_SEQ_BODY(type, seqType) \\")
 
@@ -57,11 +57,12 @@ def main():
 
     print()
     if mode == "h":
-        print("#endif /* MNW_SEQ_H_ */")
+        print("#endif /* MNW_BASE_SEQ_H_ */")
         
 def save_line(line):
     s_line = line.strip()
-    return len(s_line) > 0 and s_line[0] not in ["/", "#", "*"]
+    return (len(s_line) > 0 and s_line[0] not in ["/", "#", "*"] and 
+            s_line != "typedef double Example;")
     
 def convert_to_macro(line):
     if '"' in line:
