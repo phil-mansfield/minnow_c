@@ -10,7 +10,7 @@
 # Go to the other commented areas in this file and do what they say.
 
 CC=gcc
-CFLAGS=-O2 -Wall -Wextra -Werror -std=c99 -g -D DEBUG
+CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wundef -Wredundant-decls -Wmissing-include-dirs -Wextra-tokens -g -D DEBUG
 
 SOURCES=$(wildcard src/*.c)
 OBJECTS=$(patsubst %.c,%.o,$(SOURCES))
