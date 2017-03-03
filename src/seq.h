@@ -4,5 +4,16 @@
 #include "base_seq.h"
 
 GENERATE_SEQ_HEADER(double, DSeq)
+GENERATE_SEQ_HEADER(float, FSeq)
+
+GENERATE_SEQ_HEADER(int64_t, I64Seq)
+GENERATE_SEQ_HEADER(int32_t, I32Seq)
+GENERATE_SEQ_HEADER(uint64_t, U64Seq)
+GENERATE_SEQ_HEADER(uint32_t, U32Seq)
+
+GENERATE_SEQ_HEADER(int, ISeq)
+GENERATE_SEQ_HEADER(unsigned int, UISeq)
+GENERATE_SEQ_HEADER(long, LSeq)
+GENERATE_SEQ_HEADER(long long, LLSeq)
 
 #endif /* MNW_SEQ_H_ */
