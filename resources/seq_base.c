@@ -144,3 +144,19 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
 
     return sub;
 }
+
+ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
+    DebugAssert(n >= 0) {
+        Panic("ExSeq_Extend given negative cap size, %"PRId32".", n);
+    }
+
+    if (s.Cap >= n) { 
+        return s;
+    }
+
+    s.Cap = ((n / 4) + (n % 4 != 0))*4;
+    s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4);
+    memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
+
+    return s;
+}

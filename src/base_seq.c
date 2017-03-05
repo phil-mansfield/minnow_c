@@ -16,14 +16,18 @@ ExSeq ExSeq_New(int32_t len) {
         Panic("ExSeq_New given negative length, %"PRId32".", len);
     }
 
-    ExSeq s = { .Data = NULL, .Len = len, .Cap = len};
+
+    int32_t cap = ((len / 4) + (len % 4 != 0))*4;
+    ExSeq s = { .Data = NULL, .Len = len, .Cap = cap};
     if (!len) { return s; }
 
+    
+
     /* The last four bytes are used to store the reference counter. */
-    s.Data = malloc(len*sizeof(*s.Data) + 4);
+    s.Data = malloc(cap*sizeof(*s.Data) + 4);
     AssertAlloc(s.Data);
 
-    memset(s.Data, 0, len*sizeof(*s.Data) + 4);
+    memset(s.Data, 0, cap*sizeof(*s.Data) + 4);
 
     return s;
 }
@@ -72,13 +76,16 @@ void ExSeq_Free(ExSeq s) {
 
 ExSeq ExSeq_Append(ExSeq s, Example tail) {
     if (s.Len == s.Cap) {
-        int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
+        /* Brainteaser: why do I do this? */
+        int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap);
         DebugAssert(!s.Data || *refPtr == 0) {
             Panic("%"PRId32" living references pointing to s1 in "
                   "to ExSeq_Join.", *refPtr);
         }
 
         s.Cap = (int32_t) (ALPHA * (float) (1 + s.Cap));
+        s.Cap = ((s.Cap / 4) + (s.Cap % 4 != 0))*4;
+
         s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4);
         /* Also resets the reference counter. */
         memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
@@ -92,13 +99,15 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
 
 ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
     if (s1.Len + s2.Len  > s1.Cap) {
-        int32_t *refPtr = (int32_t*)(s1.Data + s1.Cap);
+        int32_t *refPtr = (int32_t*)(void*)(s1.Data + s1.Cap);
         DebugAssert(!refPtr || *refPtr == 0) {
             Panic("%"PRId32" living references pointing to s1 in "
                   "to ExSeq_Join.", *refPtr);
         }
 
         s1.Cap = (int32_t) (ALPHA * (float) (s1.Len + s2.Len));
+        s1.Cap = ((s1.Cap / 4) + (s1.Cap % 4 != 0))*4;
+
         s1.Data = realloc(s1.Data, s1.Cap*sizeof(*s1.Data) + 4);
         /* Also resets the reference counter. */
         memset(s1.Data + s1.Len, 0, s1.Cap - s1.Len + 4);
@@ -136,17 +145,34 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
     return sub;
 }
 
+ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
+    DebugAssert(n >= 0) {
+        Panic("ExSeq_Extend given negative cap size, %"PRId32".", n);
+    }
+
+    if (s.Cap >= n) { 
+        return s;
+    }
+
+    s.Cap = ((n / 4) + (n % 4 != 0))*4;
+    s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4);
+    memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
+
+    return s;
+}
+
 
 #define GENERATE_SEQ_BODY(type, seqType) \
     seqType seqType##_New(int32_t len) { \
         DebugAssert(len >= 0) { \
             Panic(""#seqType"_New given negative length, %"PRId32".", len); \
         } \
-        seqType s = { .Data = NULL, .Len = len, .Cap = len}; \
+        int32_t cap = ((len / 4) + (len % 4 != 0))*4; \
+        seqType s = { .Data = NULL, .Len = len, .Cap = cap}; \
         if (!len) { return s; } \
-        s.Data = malloc(len*sizeof(*s.Data) + 4); \
+        s.Data = malloc(cap*sizeof(*s.Data) + 4); \
         AssertAlloc(s.Data); \
-        memset(s.Data, 0, len*sizeof(*s.Data) + 4); \
+        memset(s.Data, 0, cap*sizeof(*s.Data) + 4); \
         return s; \
     } \
     seqType seqType##_FromArray(type *data, int32_t len) { \
@@ -186,12 +212,13 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
     } \
     seqType seqType##_Append(seqType s, type tail) { \
         if (s.Len == s.Cap) { \
-            int32_t *refPtr = (int32_t*)(s.Data + s.Cap); \
+            int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap); \
             DebugAssert(!s.Data || *refPtr == 0) { \
                 Panic("%"PRId32" living references pointing to s1 in " \
                       "to "#seqType"_Join.", *refPtr); \
             } \
             s.Cap = (int32_t) (ALPHA * (float) (1 + s.Cap)); \
+            s.Cap = ((s.Cap / 4) + (s.Cap % 4 != 0))*4; \
             s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4); \
             memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4); \
         } \
@@ -201,12 +228,13 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
     } \
     seqType seqType##_Join(seqType s1, seqType s2) { \
         if (s1.Len + s2.Len  > s1.Cap) { \
-            int32_t *refPtr = (int32_t*)(s1.Data + s1.Cap); \
+            int32_t *refPtr = (int32_t*)(void*)(s1.Data + s1.Cap); \
             DebugAssert(!refPtr || *refPtr == 0) { \
                 Panic("%"PRId32" living references pointing to s1 in " \
                       "to "#seqType"_Join.", *refPtr); \
             } \
             s1.Cap = (int32_t) (ALPHA * (float) (s1.Len + s2.Len)); \
+            s1.Cap = ((s1.Cap / 4) + (s1.Cap % 4 != 0))*4; \
             s1.Data = realloc(s1.Data, s1.Cap*sizeof(*s1.Data) + 4); \
             memset(s1.Data + s1.Len, 0, s1.Cap - s1.Len + 4); \
         } \
@@ -234,5 +262,17 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
         if (!refPtr) { return sub; } \
         (*refPtr)++; \
         return sub; \
+    } \
+    seqType seqType##_Extend(seqType s, int32_t n) { \
+        DebugAssert(n >= 0) { \
+            Panic(""#seqType"_Extend given negative cap size, %"PRId32".", n); \
+        } \
+        if (s.Cap >= n) {  \
+            return s; \
+        } \
+        s.Cap = ((n / 4) + (n % 4 != 0))*4; \
+        s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4); \
+        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4); \
+        return s; \
     }
 

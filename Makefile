@@ -54,7 +54,7 @@ debug_test: test
 build:
 	mkdir -p build/
 
-src/base_seq.h: scripts/seq_gen.py Makefile
+src/base_seq.h: scripts/seq_gen.py Makefile resources/seq_base.h resources/seq_base.c
 	python scripts/seq_gen.py c < resources/seq_base.c > src/base_seq.c
 	python scripts/seq_gen.py h < resources/seq_base.h > src/base_seq.h
 

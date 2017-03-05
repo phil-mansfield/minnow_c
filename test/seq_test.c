@@ -17,15 +17,18 @@ bool testFromArray();
 bool testSub();
 bool testAppend();
 bool testJoin();
+bool testExtend();
 
 int main() {
     bool res = true;
+    /* Note that this short-circuits later tests if earlier tests fail. */
     res = res && testNew();
     res = res && testNewWithCap();
     res = res && testFromArray();
     res = res && testSub();
     res = res && testAppend();
     res = res && testJoin();
+    res = res && testExtend();
 
     return !res;
 }
@@ -41,7 +44,20 @@ bool testNew() {
     DSeq s = DSeq_New(0);
     if (s.Len != 0 || s.Cap != 0) {
         res = false;
-        fprintf(stderr, "Expected New(0) -> {Len: %"PRId32", Cap: %"
+        fprintf(stderr, "New(0) -> {Len: %"PRId32", Cap: %"
+                PRId32"}.\n", s.Len, s.Cap);
+    } else if (refCount(s) != 0) {
+        res = false;
+        fprintf(stderr, "Expected ref count = 0 for new seqeunce, got %"
+                PRId32".\n", refCount(s));
+    }
+
+    DSeq_Free(s);
+
+    s = DSeq_New(3);
+    if (s.Len != 3 || s.Cap < 3) {
+        res = false;
+        fprintf(stderr, "New(3) -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", s.Len, s.Cap);
     } else if (refCount(s) != 0) {
         res = false;
@@ -54,7 +70,7 @@ bool testNew() {
     s = DSeq_New(1 << 20);
     if (s.Len != 1 << 20 || s.Cap != 1 << 20) {
         res = false;
-        fprintf(stderr, "Expected New(%"PRId32") -> {Len: %"PRId32", Cap: %"
+        fprintf(stderr, "New(%"PRId32") -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", 1 << 20, s.Len, s.Cap);
     } else if (refCount(s) != 0) {
         res = false;
@@ -87,6 +103,19 @@ bool testNewWithCap() {
     if (s.Len != 0 || s.Cap != 0) {
         res = false;
         fprintf(stderr, "Expected NewWithCap(0, 0) -> {Len: %"PRId32", Cap: %"
+                PRId32"}.\n", s.Len, s.Cap);
+    } else if (refCount(s) != 0) {
+        res = false;
+        fprintf(stderr, "Expected ref count = 0 for new seqeunce, got %"
+                PRId32".\n", refCount(s));
+    }
+
+    DSeq_Free(s);
+
+    s = DSeq_NewWithCap(0, 3);
+    if (s.Len != 0 || s.Cap < 3) {
+        res = false;
+        fprintf(stderr, "Expected NewWithCap(0, 3) -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", s.Len, s.Cap);
     } else if (refCount(s) != 0) {
         res = false;
@@ -137,9 +166,9 @@ bool testFromArray() {
     for (int i = 0; i < LEN(tests); i++) {
         DSeq s = DSeq_FromArray(tests[i].data, tests[i].len);
         
-        if (s.Len != tests[i].len || s.Cap != tests[i].len) {
+        if (s.Len != tests[i].len || s.Cap < tests[i].len) {
             res = false;
-            fprintf(stderr, "Expected test %d in testFromArray() to"
+            fprintf(stderr, "Expected test %d in testFromArray() to "
                     "return {Len: %"PRId32", Cap: %"PRId32"}.\n",
                     i, s.Len, s.Cap);
         }
@@ -321,6 +350,40 @@ bool testJoin() {
 
         DSeq_Free(s1);
         DSeq_Free(s2);
+    }
+
+    return res;
+}
+
+bool testExtend() {
+    bool res = true;
+
+    struct {int32_t len, cap, newCap; } tests[] = {
+        {0, 0, 0},
+        {1, 1, 0},
+        {1, 4, 0},
+        {4, 4, 0},
+        {4, 4, 4},
+        {2, 4, 4},
+        {2, 3, 4},
+        {2, 1<<10, 1<<14},
+    };
+
+    for (int i = 0; i < LEN(tests); i++) {
+        DSeq s = DSeq_NewWithCap(tests[i].len, tests[i].cap);
+        s = DSeq_Extend(s, tests[i].newCap);
+
+        if (s.Cap < tests[i].newCap) {
+            res = false;
+            fprintf(stderr, "Test %d of testExtend() gives cap size of %"
+                    PRId32".", i, s.Cap);
+        }
+
+        if (refCount(s) != 0) {
+            fprintf(stderr, "Seq_Extend added references in test %d.", i);
+        }
+
+        DSeq_Free(s);
     }
 
     return res;
