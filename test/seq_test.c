@@ -359,6 +359,7 @@ bool testExtend() {
     bool res = true;
 
     struct {int32_t len, cap, newCap; } tests[] = {
+        //{0, 0, -1},
         {0, 0, 0},
         {1, 1, 0},
         {1, 4, 0},
