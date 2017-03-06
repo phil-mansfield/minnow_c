@@ -10,7 +10,8 @@
 
 #define LEN(x) (int) (sizeof(x) / sizeof(x[0]))
 
-bool testTransposeBytes();
+bool testU32TransposeBytes();
+bool testU8DeltaEncode();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
@@ -21,20 +22,21 @@ void U32SeqPrint(U32Seq s);
 int main() {
     bool res = true;
 
-    res = res && testTransposeBytes();
+    res = res && testU32TransposeBytes();
+    res = res && testU8DeltaEncode();
 
     return !res;
 }
 
 
-bool testTransposeBytes() {
+bool testU32TransposeBytes() {
     bool res = true;
 
     /* manual tests */
 
     struct {
         uint32_t ints[4]; uint8_t bytes[16]; int32_t intLen, bufLen;
-    } tests[9] = {
+    } tests[] = {
         {{0}, {0}, 0, 0},
         {{0}, {0}, 0, 10},
         {{0xaabbccdd}, {0xdd, 0xcc, 0xbb, 0xaa}, 1, 0},
@@ -112,6 +114,106 @@ bool testTransposeBytes() {
     U8Seq_Free(t);
     U32Seq_Free(ss);
     free(state);
+
+    return res;
+}
+
+bool testU8DeltaEncode() {
+    bool res = true;
+
+    // bufFlag = 0 -> empty buffer
+    // bufFlag = 1 -> buffer that's too small
+    // bufFlag = 2 -> buffer that's too big
+    // bufFlag = 3 -> Use self as buffer
+    struct { uint8_t x[6], delta[6]; int32_t len, bufFlag; } tests[] = {
+        {{0}, {0}, 0, 0},
+        {{0}, {0}, 0, 2},
+        {{0}, {0}, 0, 3},
+        {{1}, {1}, 1, 0},
+        {{1}, {1}, 1, 1},
+        {{1}, {1}, 1, 2},
+        {{1}, {1}, 1, 3},
+        {{2, 1}, {1, 0xff}, 2, 0},
+        {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 0},
+        {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 1},
+        {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 2},
+        {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 3},
+    };
+
+    for (int32_t i = 0; i < LEN(tests); i++) {
+        fprintf(stderr, "%d\n", i);
+
+        fprintf(stderr, "Encode\n");
+
+        /* Encoding */
+
+        U8Seq xSeq = U8Seq_FromArray(tests[i].x, tests[i].len);
+        U8Seq buf;
+        switch (tests[i].bufFlag) {
+        case 0:
+            buf = U8Seq_Empty();
+            break;
+        case 1:
+            buf = U8Seq_New(xSeq.Len - 1);
+            break;
+        case 2:
+            buf = U8Seq_New(xSeq.Len + 1);
+            break;
+        case 3:
+            buf = xSeq;
+        }
+
+        U8Seq deltaSeq = U8Seq_FromArray(tests[i].delta, tests[i].len);
+        U8Seq deltaRes = util_U8DeltaEncode(xSeq, buf);
+        if (!U8SeqEqual(deltaSeq, deltaRes)) {
+            fprintf(stderr, "In test %d of testU8DeltaEncode, expected "
+                    "util_U8DeltaEncode to return ", i);
+            U8SeqPrint(deltaSeq);
+            fprintf(stderr, ", but got ");
+            U8SeqPrint(deltaRes);
+            res = false;
+        }
+
+        U8Seq_Free(deltaRes);
+        if (tests[i].bufFlag != 3) {
+           U8Seq_Free(xSeq);
+        }
+
+        fprintf(stderr, "Decode\n"); 
+
+        /* Decoding */
+
+        switch (tests[i].bufFlag) {
+        case 0:
+            buf = U8Seq_Empty();
+            break;
+        case 1:
+            buf = U8Seq_New(xSeq.Len - 1);
+            break;
+        case 2:
+            buf = U8Seq_New(xSeq.Len + 1);
+            break;
+        case 3:
+            buf = deltaSeq;
+        }
+
+        xSeq = U8Seq_FromArray(tests[i].x, tests[i].len);
+        U8Seq xRes = util_U8UndoDeltaEncode(deltaSeq, buf);
+        if (!U8SeqEqual(xRes, xSeq)) {
+            fprintf(stderr, "In test %d of testU8DeltaEncode, expected "
+                    "util_U8UndoDeltaEncode to return ", i);
+            U8SeqPrint(deltaSeq);
+            fprintf(stderr, ", but got ");
+            U8SeqPrint(deltaRes);
+            res = false;
+        }
+
+        U8Seq_Free(xRes);
+        U8Seq_Free(xSeq);
+        if (tests[i].bufFlag != 3) {
+           U8Seq_Free(deltaSeq);
+        }
+    }
 
     return res;
 }

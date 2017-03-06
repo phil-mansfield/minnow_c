@@ -8,6 +8,7 @@ U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
     (void) dx;
     (void) level;
     (void) buf;
+    Panic("%s Not Yet Implemented.", __FUNCTION__);
     return U32Seq_Empty();
 }
 
@@ -20,28 +21,33 @@ U32Seq util_UniformBinIndex(
     (void) dx;
     (void) level;
     (void) buf;
+    Panic("%s Not Yet Implemented.", __FUNCTION__);
     return U32Seq_Empty();
 }
 
 FSeq util_UndoBinIndex(
-    U32Seq idx, U8Seq level, float x0, float dx, FSeq buf
+    U32Seq idx, U8Seq level, float x0, float dx, rand_State *state, FSeq buf
 ) {
     (void) idx;
     (void) x0;
     (void) dx;
     (void) level;
+    (void) state;
     (void) buf;
+    Panic("%s Not Yet Implemented.", __FUNCTION__);
     return FSeq_Empty();
 }
 
 FSeq util_UndoUniformBinIndex(
-    U32Seq idx, uint8_t level, float x0, float dx, FSeq buf
+    U32Seq idx, uint8_t level, float x0, float dx, rand_State *state, FSeq buf
 ) {
     (void) idx;
     (void) x0;
     (void) dx;
     (void) level;
+    (void) state;
     (void) buf;
+    Panic("%s Not Yet Implemented.", __FUNCTION__);
     return FSeq_Empty();
 }
 
@@ -62,12 +68,6 @@ U8Seq util_U32TransposeBytes(U32Seq x, U8Seq buf) {
     }
 
     return buf;
-}
-
-U8Seq util_U32TransposeBits(U32Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U8Seq_Empty();
 }
 
 U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
@@ -94,56 +94,23 @@ U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
     return buf;
 }
 
-U32Seq util_U32UndoTransposeBits(U32Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U32Seq_Empty();
-}
-
 U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U8Seq_Empty();
-}
+    buf = U8Seq_Extend(buf, x.Len);
+    if (buf.Len == 0) {
+        return buf; 
+    }
 
-U16Seq util_U16DeltaEncode(U8Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U16Seq_Empty();
-}
-
-U32Seq util_U32DeltaEncode(U8Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U32Seq_Empty();
-}
-
-U64Seq util_U64DeltaEncode(U8Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U64Seq_Empty();
+    buf.Data[0] = x.Data[0];
+    for (int32_t i = x.Len - 1; i > 0; i--) {
+        buf.Data[i] = x.Data[i] - x.Data[i - 1];
+    }
+    return buf;
 }
 
 U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U8Seq_Empty();
-}
-
-U16Seq util_U16UndoDeltaEncode(U16Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U16Seq_Empty();
-}
-
-U32Seq util_U32UndoDeltaEncode(U32Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U32Seq_Empty();
-}
-
-U64Seq util_U64UndoDeltaEncode(U64Seq x, U8Seq buf) {
-    (void) x;
-    (void) buf;
-    return U64Seq_Empty();
+    buf = U8Seq_Extend(buf, x.Len);
+    for (int32_t i = 1; i < buf.Len; i++) {
+        buf.Data[i] = buf.Data[i-1] + x.Data[i];
+    }
+    return buf;
 }
