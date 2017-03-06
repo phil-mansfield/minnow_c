@@ -62,7 +62,7 @@ ExSeq ExSeq_NewWithCap(int32_t len, int32_t cap) {
 }
 
 void ExSeq_Deref(ExSeq s) {
-    int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
+    int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap);
     if (!refPtr || !*refPtr) {
         ExSeq_Free(s);
         return;
@@ -142,7 +142,7 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
     sub.Cap = s.Cap - start;
 
 
-    int32_t *refPtr = (int32_t*)(s.Data + s.Cap);
+    int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap);
     if (!refPtr) { return sub; }
     (*refPtr)++;
 
