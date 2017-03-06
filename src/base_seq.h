@@ -31,7 +31,7 @@ typedef struct ExSeq {
     int32_t Len, Cap;
 } ExSeq;
 
-const ExSeq ExSeq_Empty = {NULL, 0, 0};
+ExSeq ExSeq_Empty();
 
 /* `ExSeq` creates a new `Example` sequence with length `len`.
  */
@@ -85,7 +85,7 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n);
         type *Data; \
         int32_t Len, Cap; \
     } seqType; \
-    const seqType seqType##_Empty = {NULL, 0, 0}; \
+    seqType seqType##_Empty(); \
     seqType seqType##_New(int32_t len); \
     seqType seqType##_FromArray(type *data, int32_t len); \
     seqType seqType##_NewWithCap(int32_t len, int32_t cap); \

@@ -31,7 +31,7 @@ typedef struct ExSeq {
     int32_t Len, Cap;
 } ExSeq;
 
-const ExSeq ExSeq_Empty = {NULL, 0, 0};
+ExSeq ExSeq_Empty();
 
 /* `ExSeq` creates a new `Example` sequence with length `len`.
  */

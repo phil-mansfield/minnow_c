@@ -11,6 +11,11 @@
 /* Exported Functions */
 /**********************/
 
+ExSeq ExSeq_Empty() {
+    ExSeq s = {NULL, 0, 0};
+    return s;
+}
+
 ExSeq ExSeq_New(int32_t len) {
     DebugAssert(len >= 0) {
         Panic("ExSeq_New given negative length, %"PRId32".", len);
@@ -163,6 +168,10 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
 
 
 #define GENERATE_SEQ_BODY(type, seqType) \
+    seqType seqType##_Empty() { \
+        seqType s = {NULL, 0, 0}; \
+        return s; \
+    } \
     seqType seqType##_New(int32_t len) { \
         DebugAssert(len >= 0) { \
             Panic(""#seqType"_New given negative length, %"PRId32".", len); \

@@ -11,6 +11,11 @@
 /* Exported Functions */
 /**********************/
 
+ExSeq ExSeq_Empty() {
+    ExSeq s = {NULL, 0, 0};
+    return s;
+}
+
 ExSeq ExSeq_New(int32_t len) {
     DebugAssert(len >= 0) {
         Panic("ExSeq_New given negative length, %"PRId32".", len);
