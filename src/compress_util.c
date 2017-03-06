@@ -96,6 +96,9 @@ U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
 
 U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
     buf = U8Seq_Extend(buf, x.Len);
+    buf = U8Seq_Sub(buf, 0, x.Len);
+    U8Seq_Deref(buf);
+        
     if (buf.Len == 0) {
         return buf; 
     }
@@ -109,6 +112,14 @@ U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
 
 U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
     buf = U8Seq_Extend(buf, x.Len);
+    buf = U8Seq_Sub(buf, 0, x.Len);
+    U8Seq_Deref(buf);
+
+    if (buf.Len == 0) {
+        return buf;
+    }
+
+    buf.Data[0] = x.Data[0];
     for (int32_t i = 1; i < buf.Len; i++) {
         buf.Data[i] = buf.Data[i-1] + x.Data[i];
     }

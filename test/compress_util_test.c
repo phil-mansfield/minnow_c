@@ -133,7 +133,7 @@ bool testU8DeltaEncode() {
         {{1}, {1}, 1, 1},
         {{1}, {1}, 1, 2},
         {{1}, {1}, 1, 3},
-        {{2, 1}, {1, 0xff}, 2, 0},
+        {{2, 1}, {2, 0xff}, 2, 0},
         {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 0},
         {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 1},
         {{1, 1, 2, 3, 5, 8}, {1, 0, 1, 1, 2, 3}, 6, 2},
@@ -141,10 +141,6 @@ bool testU8DeltaEncode() {
     };
 
     for (int32_t i = 0; i < LEN(tests); i++) {
-        fprintf(stderr, "%d\n", i);
-
-        fprintf(stderr, "Encode\n");
-
         /* Encoding */
 
         U8Seq xSeq = U8Seq_FromArray(tests[i].x, tests[i].len);
@@ -166,11 +162,13 @@ bool testU8DeltaEncode() {
         U8Seq deltaSeq = U8Seq_FromArray(tests[i].delta, tests[i].len);
         U8Seq deltaRes = util_U8DeltaEncode(xSeq, buf);
         if (!U8SeqEqual(deltaSeq, deltaRes)) {
-            fprintf(stderr, "In test %d of testU8DeltaEncode, expected "
-                    "util_U8DeltaEncode to return ", i);
+            fprintf(stderr, "In test %d of testU8DeltaEncode(", i);
+            U8SeqPrint(xSeq);
+            fprintf(stderr, "), expected util_U8DeltaEncode to return ");
             U8SeqPrint(deltaSeq);
             fprintf(stderr, ", but got ");
             U8SeqPrint(deltaRes);
+            fprintf(stderr, "\n");
             res = false;
         }
 
@@ -178,8 +176,6 @@ bool testU8DeltaEncode() {
         if (tests[i].bufFlag != 3) {
            U8Seq_Free(xSeq);
         }
-
-        fprintf(stderr, "Decode\n"); 
 
         /* Decoding */
 
@@ -200,11 +196,13 @@ bool testU8DeltaEncode() {
         xSeq = U8Seq_FromArray(tests[i].x, tests[i].len);
         U8Seq xRes = util_U8UndoDeltaEncode(deltaSeq, buf);
         if (!U8SeqEqual(xRes, xSeq)) {
-            fprintf(stderr, "In test %d of testU8DeltaEncode, expected "
-                    "util_U8UndoDeltaEncode to return ", i);
+            fprintf(stderr, "In test %d of testU8DeltaEncode(", i);
+            U8SeqPrint(deltaSeq);
+            fprintf(stderr, "), expected util_U8UndoDeltaEncode to return ");
             U8SeqPrint(deltaSeq);
             fprintf(stderr, ", but got ");
             U8SeqPrint(deltaRes);
+            fprintf(stderr, "\n");
             res = false;
         }
 
