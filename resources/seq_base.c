@@ -159,7 +159,7 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
     }
 
     s.Cap = ((n / 4) + (n % 4 != 0))*4;
-    s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4);
+    s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
     AssertAlloc(s.Data);
     memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
 

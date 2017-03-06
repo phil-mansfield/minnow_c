@@ -23,7 +23,8 @@
  * If you want a stack trace (which you should), prefer to use Panic instead
  * of fprintf for reporting your error.
  */
-#define Assert(x) for (; (!(x)); assert(x))
+#define Assert(x) for (; !(x); assert(x))
+        
 
 /* `AssertAlloc` is an assertion which specifically checks whether an allocation
  * error has occured. Unlike Panic, it does not assume that allocators still
@@ -36,7 +37,7 @@
     do { \
         Assert(ptr) {                                            \
             fprintf(stderr, "%s: %s: L%d: Allocation failed\n.", \
-                    __FILE__, __FUNCTION__, __LINE__);           \
+                    __FILE__, __FUNCTION__, __LINE__);         \
             exit(1); \
         } \
     } while(0)
@@ -72,10 +73,10 @@
         fprintf(stderr, fmt, ##__VA_ARGS__); \
         fprintf(stderr, "\n"); \
         fprintf(stderr, "Stack trace:\n"); \
-        void **panicStackframes_ = calloc(100, sizeof(*panicStackframes_)); \
+        void **panicStackframes_ = calloc((size_t)100, sizeof(*panicStackframes_)); \
         size_t panicSize_ = backtrace(panicStackframes_, 100); \
         char **panicStrings_ = backtrace_symbols( \
-            panicStackframes_, panicSize_ \
+            panicStackframes_, (int)panicSize_                          \
         );                                                              \
         for (size_t panicIdx_ = 0; panicIdx_ < panicSize_; panicIdx_++) \
             fprintf(stderr, "%s\n", panicStrings_[panicIdx_]);           \

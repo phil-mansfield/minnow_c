@@ -25,6 +25,7 @@ rand_State *rand_Seed(uint64_t seed, int32_t n) {
     }
 
     rand_State *state = calloc(n, sizeof(*state));
+    AssertAlloc(state);
     state[0][0]= splitmixNext(&seed);
     state[0][1]= splitmixNext(&seed);
 

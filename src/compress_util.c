@@ -2,14 +2,31 @@
 #include "debug.h"
 #include <inttypes.h>
 
+/************************/
+/* Forward Declarations */
+/************************/
+
+void checkBinIndexRange(FSeq x, float x0, float dx);
+U8Seq U8SeqSetLen(U8Seq buf, int32_t len);
+U32Seq U32SeqSetLen(U32Seq buf, int32_t len);
+FSeq FSeqSetLen(FSeq buf, int32_t len);
+
+/**********************/
+/* Exported Functions */
+/**********************/
+
 U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
-    (void) x;
+    DebugAssert(x.Len == level.Len) {
+        Panic("BinIndex given x with length %"PRId32", but level with length %"
+              PRId32".", x.Len, level.Len);
+    }
+
+    U32SeqSetLen(buf, x.Len);
+
     (void) x0;
     (void) dx;
-    (void) level;
-    (void) buf;
-    Panic("%s Not Yet Implemented.", __FUNCTION__);
-    return U32Seq_Empty();
+
+    return buf;
 }
 
 
@@ -57,9 +74,7 @@ U8Seq util_U32TransposeBytes(U32Seq x, U8Seq buf) {
               ", which means Len*4 would overflow.", x.Len);
     }
 
-    buf = U8Seq_Extend(buf, x.Len*4);
-    buf = U8Seq_Sub(buf, 0, x.Len*4);
-    U8Seq_Deref(buf);
+    U8SeqSetLen(buf, x.Len*4);
 
     for (int32_t j = 0; j < 4; j++) {
         for (int32_t i = 0; i < x.Len; i++) {
@@ -77,9 +92,7 @@ U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
               "by four and thus cannot be an encoded uint32 sequence.", x.Len);
     }
 
-    buf = U32Seq_Extend(buf, x.Len / 4);
-    buf = U32Seq_Sub(buf, 0, x.Len / 4);
-    U32Seq_Deref(buf);
+    U32SeqSetLen(buf, x.Len);
 
     for (int32_t i = 0; i < buf.Len; i++) {
         buf.Data[i] = 0;
@@ -95,10 +108,8 @@ U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
 }
 
 U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
-    buf = U8Seq_Extend(buf, x.Len);
-    buf = U8Seq_Sub(buf, 0, x.Len);
-    U8Seq_Deref(buf);
-        
+    U8SeqSetLen(buf, x.Len);      
+  
     if (buf.Len == 0) {
         return buf; 
     }
@@ -111,9 +122,7 @@ U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
 }
 
 U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
-    buf = U8Seq_Extend(buf, x.Len);
-    buf = U8Seq_Sub(buf, 0, x.Len);
-    U8Seq_Deref(buf);
+    U8SeqSetLen(buf, x.Len);
 
     if (buf.Len == 0) {
         return buf;
@@ -124,4 +133,47 @@ U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
         buf.Data[i] = buf.Data[i-1] + x.Data[i];
     }
     return buf;
+}
+
+/********************/
+/* Helper Functions */
+/********************/
+
+U8Seq U8SeqSetLen(U8Seq buf, int32_t len) {
+    buf = U8Seq_Extend(buf, len);
+    buf = U8Seq_Sub(buf, 0, len);
+    U8Seq_Deref(buf);
+    return buf;
+}
+
+U32Seq U32SeqSetLen(U32Seq buf, int32_t len) {
+    buf = U32Seq_Extend(buf, len);
+    buf = U32Seq_Sub(buf, 0, len);
+    U32Seq_Deref(buf);
+    return buf;
+}
+
+FSeq FSeqSetLen(FSeq buf, int32_t len) {
+    buf = FSeq_Extend(buf, len);
+    buf = FSeq_Sub(buf, 0, len);
+    FSeq_Deref(buf);
+    return buf;
+}
+
+void checkBinIndexRange(FSeq x, float x0, float dx) {
+    if (dx > 0)  {
+        for (int32_t i = 0; i < x.Len; i++) {
+            if (x.Data[i] < x0 || x.Data[i] > x0 + dx) {
+                Panic("Element %"PRId32" of x = %g, but range is [%g, %g).",
+                      i, x.Data[i], x0, x0+dx);
+            }
+        }
+    } else {
+        for (int32_t i = 0; i < x.Len; i++) {
+            if (x.Data[i] > x0 || x.Data[i] < x0 + dx) {
+                Panic("Element %"PRId32" of x = %g, but range is (%g, %g].",
+                      i, x.Data[i], x0+dx, x0);
+            }
+        }
+    }
 }
