@@ -198,16 +198,15 @@ bool testSub() {
     DSeq s = DSeq_FromArray(data, LEN(data));
     s.Len = 4;
 
-    DSeq empty; /* Making this ISC C compliant. */
     struct {int32_t start, end, subLen, subCap;
         double sub[8]; DSeq out;} tests[4] = {
-        //{-1, 0, 0, 0, {0}, empty},
-        //{0, 9, 0, 0, {0}, empty},
-        //{3, 0, 0, 0, {0}, empty},
-        {0, 4, 4, 8, {1, 2, 3, 4}, empty},
-        {0, 0, 0, 8, {0}, empty},
-        {0, 8, 8, 8, {1, 2, 3, 4, 5, 6, 7, 8}, empty},
-        {2, 5, 3, 6, {3, 4, 5}, empty},
+        //{-1, 0, 0, 0, {0}, DSeq_Empty()},
+        //{0, 9, 0, 0, {0}, DSeq_Empty()},
+        //{3, 0, 0, 0, {0}, DSeq_Empty()},
+        {0, 4, 4, 8, {1, 2, 3, 4}, DSeq_Empty()},
+        {0, 0, 0, 8, {0}, DSeq_Empty()},
+        {0, 8, 8, 8, {1, 2, 3, 4, 5, 6, 7, 8}, DSeq_Empty()},
+        {2, 5, 3, 6, {3, 4, 5}, DSeq_Empty()},
     };
 
     bool res = true;
