@@ -10,9 +10,9 @@
 # Go to the commented areas in this file that start with a "!" and do what
 # they say.
 
-#CC=clang
+CC=clang
 
-CC=gcc
+#CC=gcc
 CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wcast-align -Wundef -Wredundant-decls -Wmissing-include-dirs -g -D DEBUG
 
 #CC=icc

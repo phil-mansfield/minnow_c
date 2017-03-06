@@ -51,7 +51,11 @@
  */
 #ifdef DEBUG
 #define DebugAssert(x) Assert(x)
+#if defined(__clang__)
+#define DebugPrintf(fmt, ...)
+#else
 #define DebugPrintf(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#endif
 #define UncheckedDebugAssert(x) Assert(x)
 #else /* !DEBUG */
 #define DebugAssert(x) assert(x); if(0)
@@ -64,7 +68,26 @@
  * may require dynamic memory allocation, but also kills the program, so this
  * is only a problem if your allocator is currently compromised.
  */
-#if defined(__GNUC__) || defined(__linux__)
+#if defined(__clang__)
+#define Panic(fmt, ...) \
+    do { \
+        fprintf(stderr, "Panic at file %s, function %s, line %d:\n", \
+                __FILE__, __FUNCTION__, __LINE__);               \
+        fprintf(stderr, fmt, __VA_ARGS__); \
+        fprintf(stderr, "\n");                                   \
+        fprintf(stderr, "Stack trace:\n"); \
+        void **panicStackframes_ = calloc((size_t)100, sizeof(*panicStackframes_)); \
+        size_t panicSize_ = backtrace(panicStackframes_, 100); \
+        char **panicStrings_ = backtrace_symbols( \
+            panicStackframes_, (int)panicSize_                          \
+        );                                                              \
+        for (size_t panicIdx_ = 0; panicIdx_ < panicSize_; panicIdx_++) \
+            fprintf(stderr, "%s\n", panicStrings_[panicIdx_]);           \
+        free(panicStrings_); \
+        exit(1); \
+    } while (0)
+#else
+//#if defined(__GNUC__) || defined(__linux__)
 #define Panic(fmt, ...) \
     do { \
         /* This is a bit excessive, but I'd prefer to avoid linking. */ \
@@ -83,14 +106,15 @@
         free(panicStrings_); \
         exit(1); \
     } while (0)
-#else /* __GNUC__ || __linux__ */
-#define Panicf(fmt, ...) \
-    do { \
-        fprintf(stderr, "%s:%s:L%d:\n", __FILE__, __FUNCTION__, __LINE__); \
-        fprintf(stderr, fmt, ##__VA_ARGS__); \
-        fprintf(stderr, "\n"); \
-        exit(1); \
-    } while (0)
-#endif /* __GNUC__ || __linux__ */
+#endif
+//#else
+//#define Panicf(fmt, ...)                      \
+//    do {                                                              \
+//        fprintf(stderr, "%s:%s:L%d:\n", __FILE__, __FUNCTION__, __LINE__); \
+//        fprintf(stderr, fmt, ##__VA_ARGS__);                                  \
+//        fprintf(stderr, "\n");                                        \
+//        exit(1);                                                      \
+//    } while (0)
+//#endif /* __GNUC__ || __linux__ */
 
 #endif /* MNW_DEBUG_*/
