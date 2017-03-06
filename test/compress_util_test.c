@@ -12,6 +12,8 @@
 
 bool testU32TransposeBytes();
 bool testU8DeltaEncode();
+bool testBinIndex();
+bool testUndoBinIndex();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
@@ -24,6 +26,8 @@ int main() {
 
     res = res && testU32TransposeBytes();
     res = res && testU8DeltaEncode();
+    res = res && testBinIndex();
+    res = res && testUndoBinIndex();
 
     return !res;
 }
@@ -212,6 +216,103 @@ bool testU8DeltaEncode() {
            U8Seq_Free(deltaSeq);
         }
     }
+
+    return res;
+}
+
+bool testBinIndex() {
+    bool res = true;
+
+    struct {
+        float x[8];
+        uint8_t level[8];
+        uint32_t idx[8]; 
+        int32_t len;
+        float x0, dx;
+    } tests[] = {
+        {{0}, {0}, {0}, 0, 0, 1},
+        {{0}, {0}, {0}, 1, 0, 1},
+        {{0.25}, {1}, {0}, 1, 0, 1},
+        {{0.75}, {1}, {1}, 1, 0, 1},
+        {{0.5, 1.5, 3.5}, {2, 2, 2}, {0, 1, 3}, 3, 0, 4},
+        {{3.5, 1.5, 0.5}, {2, 2, 2}, {3, 1, 0}, 3, 0, 4},
+        {{3.5, 1.5, 0.5}, {2, 0, 2}, {3, 0, 0}, 3, 0, 4},
+        {{3, 5, 7, 9}, {2, 2, 2, 2}, {0, 1, 2, 3}, 4, 2, 8},
+        {{3, 5, 7, 9}, {3, 3, 3, 3}, {1, 3, 5, 7}, 4, 2, 8},
+        {{-0.5, -1.5, -3.5}, {2, 2, 2}, {0, 1, 3}, 3, 0, -4}
+    };
+
+    for (int i = 0; i < LEN(tests); i++) {
+        FSeq x = FSeq_FromArray(tests[i].x, tests[i].len);
+        U8Seq level = U8Seq_FromArray(tests[i].level, tests[i].len);
+        U32Seq idx = U32Seq_FromArray(tests[i].idx, tests[i].len);
+        U32Seq buf = U32Seq_New(3);
+
+        U32Seq out = util_BinIndex(x, level, tests[i].x0, tests[i].dx, buf);
+        if (!U32SeqEqual(out, idx)) {
+            fprintf(stderr, "In test %d of testBinIndex, expected "
+                    "util_BinIndex to return ", i);
+            U32SeqPrint(idx);
+            fprintf(stderr, ", but got ");
+            U32SeqPrint(out);
+            fprintf(stderr, "\n");
+            res = false;
+        }
+
+        FSeq_Free(x);
+        U8Seq_Free(level);
+        U32Seq_Free(idx);
+        U32Seq_Free(buf);
+    }
+
+    return res;
+}
+
+bool testUndoBinIndex() {
+    bool res = true;
+
+    struct {
+        uint32_t idx[8];
+        uint8_t level[8];
+        int32_t len;
+        float x0, dx;
+    } tests[] = {
+        {{0}, {0}, 0, 0, 16},
+        {{0}, {0}, 1, 0, 16},
+        {{0, 1, 2, 3, 4, 5, 6, 7}, {0, 1, 2, 3, 4, 5, 6, 7}, 8, -4, 8},
+    };
+
+    rand_State *state = rand_Seed(0, 1);
+
+    for (int32_t i = 0; i < LEN(tests); i++) {
+        U32Seq idx = U32Seq_FromArray(tests[i].idx, tests[i].len);
+        U8Seq level = U8Seq_FromArray(tests[i].level, tests[i].len);
+        FSeq buf = FSeq_New(3);
+
+        FSeq x = util_UndoBinIndex(
+            idx, level, tests[i].x0, tests[i].dx, state, buf
+        );
+        U32Seq idx2 = util_BinIndex(
+            x, level, tests[i].x0, tests[i].dx, U32Seq_Empty()
+        );
+
+        if (!U32SeqEqual(idx, idx2)) {
+            fprintf(stderr, "In test %d of testUndoBinIndex(), expected "
+                    "output of util_BinIndex() to be ", i);
+            U32SeqPrint(idx);
+            fprintf(stderr, ", but got ");
+            U32SeqPrint(idx2);
+            fprintf(stderr, ".\n");
+            res = false;            
+        }
+
+        FSeq_Free(x);
+        U8Seq_Free(level);
+        U32Seq_Free(idx2);
+        U32Seq_Free(idx);
+    }
+
+    free(state);
 
     return res;
 }
