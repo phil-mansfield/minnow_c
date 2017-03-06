@@ -1,9 +1,9 @@
-# Author: Phil Mansfield
+# Author: Phil Mansfield (mansfield@uchicago.edu)
 #
-# How to use:
+# How to run:
 # make - puts a library file in ./build
 # make test - runs all tests and benchmarks in ./test. Assumes the existence
-#              of a particular script called runTests.py in that scripts/.
+#              of a particular script called runTests.py in scripts/.
 # make clean - removes temporary files and allows for a clean build.
 #
 # How to use for a new project:
@@ -77,7 +77,7 @@ $(SO_TARGET): build $(OBJECTS) $(HEADERS)
 %_bench: %_bench.c $(TARGET)
 	$(CC) $@.c -o $@ $(CFLAGS) -L build $(LIBRARIES) -I src $(INCLUDES) $(SELF_FLAG) $(LIBRARY_FLAGS)
 
-test: $(TESTS) scripts/run_tests.py
+test: $(TESTS) scripts/run_tests.py $(TARGET)
 	@python scripts/run_tests.py test/ test
 	@python scripts/run_tests.py test/ bench
 
