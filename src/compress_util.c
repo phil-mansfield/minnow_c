@@ -21,7 +21,7 @@ U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
               PRId32".", x.Len, level.Len);
     }
 
-    U32SeqSetLen(buf, x.Len);
+    buf = U32SeqSetLen(buf, x.Len);
 
     (void) x0;
     (void) dx;
@@ -74,7 +74,7 @@ U8Seq util_U32TransposeBytes(U32Seq x, U8Seq buf) {
               ", which means Len*4 would overflow.", x.Len);
     }
 
-    U8SeqSetLen(buf, x.Len*4);
+    buf = U8SeqSetLen(buf, x.Len*4);
 
     for (int32_t j = 0; j < 4; j++) {
         for (int32_t i = 0; i < x.Len; i++) {
@@ -92,15 +92,15 @@ U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
               "by four and thus cannot be an encoded uint32 sequence.", x.Len);
     }
 
-    U32SeqSetLen(buf, x.Len);
+    buf = U32SeqSetLen(buf, x.Len / 4);
 
     for (int32_t i = 0; i < buf.Len; i++) {
         buf.Data[i] = 0;
     }
-
+	
     for (int32_t j = 0; j < 4; j++) {
         for (int32_t i = 0; i < buf.Len; i++) {
-            buf.Data[i] |= ((uint32_t) x.Data[i + j*buf.Len]) << 8 * j;
+		     buf.Data[i] |= ((uint32_t) x.Data[i + j*buf.Len]) << 8 * j;
         }
     }
 
@@ -108,7 +108,7 @@ U32Seq util_U32UndoTransposeBytes(U8Seq x, U32Seq buf) {
 }
 
 U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
-    U8SeqSetLen(buf, x.Len);      
+    buf = U8SeqSetLen(buf, x.Len);      
   
     if (buf.Len == 0) {
         return buf; 
@@ -122,7 +122,7 @@ U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf) {
 }
 
 U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
-    U8SeqSetLen(buf, x.Len);
+    buf = U8SeqSetLen(buf, x.Len);
 
     if (buf.Len == 0) {
         return buf;
