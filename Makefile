@@ -36,7 +36,7 @@ TESTS=$(patsubst %.c,%,$(TEST_SOURCES))
 # Location of libraries being used.
 LIBRARIES=
 # Flags of libraries being used.
-LIBRARY_FLAGS=
+LIBRARY_FLAGS=-lm
 # Location of .h files which should be included.
 INCLUDES=
 
