@@ -277,20 +277,19 @@ bool testUndoBinIndex() {
 
     struct {
         uint32_t idx[8];
-        uint8_t level[8];
+        uint8_t level;
         int32_t len;
         float x0, dx;
     } tests[] = {
-        {{0}, {0}, 0, 0, 16},
-        {{0}, {0}, 1, 0, 16},
-        {{0, 1, 2, 3, 4, 5, 6, 7}, {0, 1, 2, 3, 4, 5, 6, 7}, 8, -4, 8},
+        {{0}, 0, 0, 0, 16},
+        {{0}, 0, 1, 0, 16},
+        {{0, 1, 2, 3, 4, 5, 6, 7}, 4, 8, -4, 8},
     };
 
     rand_State *state = rand_Seed(0, 1);
 
     for (int32_t i = 0; i < LEN(tests); i++) {
         U32Seq idx = U32Seq_FromArray(tests[i].idx, tests[i].len);
-        U8Seq level = U8Seq_FromArray(tests[i].level, tests[i].len);
         FSeq buf = FSeq_New(3);
 
         FSeq x = util_UndoBinIndex(
@@ -311,7 +310,6 @@ bool testUndoBinIndex() {
         }
 
         FSeq_Free(x);
-        U8Seq_Free(level);
         U32Seq_Free(idx2);
         U32Seq_Free(idx);
     }
@@ -369,7 +367,6 @@ bool testUniformBinIndex() {
 }
 
 bool testUndoUniformBinIndex() {
-    return false;
 }
 
 /********************/
