@@ -14,6 +14,8 @@ bool testU32TransposeBytes();
 bool testU8DeltaEncode();
 bool testBinIndex();
 bool testUndoBinIndex();
+bool testUniformBinIndex();
+bool testUndoUniformBinIndex();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
@@ -28,6 +30,8 @@ int main() {
     res = res && testU8DeltaEncode();
     res = res && testBinIndex();
     res = res && testUndoBinIndex();
+    res = res && testUniformBinIndex();
+    res = res && testUndoUniformBinIndex();
 
     return !res;
 }
@@ -315,6 +319,57 @@ bool testUndoBinIndex() {
     free(state);
 
     return res;
+}
+
+bool testUniformBinIndex() {
+    bool res = true;
+
+    struct {
+        float x[8];
+        uint8_t level;
+        uint32_t idx[8]; 
+        int32_t len;
+        float x0, dx;
+    } tests[] = {
+        {{0}, 0, {0}, 0, 0, 1},
+        {{0}, 0, {0}, 1, 0, 1},
+        {{0.25}, 1, {0}, 1, 0, 1},
+        {{0.75}, 1, {1}, 1, 0, 1},
+        {{0.5, 1.5, 3.5}, 2, {0, 1, 3}, 3, 0, 4},
+        {{3.5, 1.5, 0.5}, 2, {3, 1, 0}, 3, 0, 4},
+        {{3, 5, 7, 9}, 2, {0, 1, 2, 3}, 4, 2, 8},
+        {{3, 5, 7, 9}, 3, {1, 3, 5, 7}, 4, 2, 8},
+        {{-0.5, -1.5, -3.5}, 2, {0, 1, 3}, 3, 0, -4}
+    };
+
+    for (int i = 0; i < LEN(tests); i++) {
+        FSeq x = FSeq_FromArray(tests[i].x, tests[i].len);
+        U32Seq idx = U32Seq_FromArray(tests[i].idx, tests[i].len);
+        U32Seq buf = U32Seq_New(3);
+
+        U32Seq out = util_UniformBinIndex(
+            x, tests[i].level, tests[i].x0, tests[i].dx, buf
+        );
+        if (!U32SeqEqual(out, idx)) {
+            fprintf(stderr, "In test %d of testBinIndex, expected "
+                    "util_UniformBinIndex to return ", i);
+            U32SeqPrint(idx);
+            fprintf(stderr, ", but got ");
+            U32SeqPrint(out);
+            fprintf(stderr, "\n");
+            res = false;
+        }
+
+        FSeq_Free(x);
+        U32Seq_Free(idx);
+        U32Seq_Free(buf);
+    }
+
+    return res;
+}
+
+bool testUndoUniformBinIndex() {
+    return false;
 }
 
 /********************/

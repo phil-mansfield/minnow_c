@@ -49,13 +49,28 @@ U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
 U32Seq util_UniformBinIndex(
     FSeq x, uint8_t level, float x0, float dx, U32Seq buf
 ) {
-    (void) x;
-    (void) x0;
-    (void) dx;
-    (void) level;
-    (void) buf;
-    Panic("%s Not Yet Implemented.", __FUNCTION__);
-    return U32Seq_Empty();
+    DebugAssert(level <= 32) {
+        Panic("level set to %"PRIu8", which is above the "
+              "limit of 32.", level);
+    }
+
+    buf = U32SeqSetLen(buf, x.Len);
+    checkBinIndexRange(x, x0, dx);
+    
+    float numBins = (float) (1 << level);
+
+    for (int32_t i = 0; i < x.Len; i++) {
+        float delta = (x.Data[i] - x0) / dx;
+        if (delta < 0) { // must be floating point error
+            buf.Data[i] = 0;
+        } else if (delta >= 1) { // must be floating point error
+            buf.Data[i] = (1<<(uint32_t)level) - 1;
+        } else {
+            buf.Data[i] = (uint32_t) (delta * numBins);
+        }
+    }
+
+    return buf;
 }
 
 FSeq util_UndoBinIndex(
@@ -94,14 +109,30 @@ FSeq util_UndoBinIndex(
 FSeq util_UndoUniformBinIndex(
     U32Seq idx, uint8_t level, float x0, float dx, rand_State *state, FSeq buf
 ) {
-    (void) idx;
-    (void) x0;
-    (void) dx;
-    (void) level;
-    (void) state;
-    (void) buf;
-    Panic("%s Not Yet Implemented.", __FUNCTION__);
-    return FSeq_Empty();
+
+    buf = FSeqSetLen(buf, idx.Len);
+    uint32_t bins = 1 << (uint32_t) level;
+    float binWidth = dx / ((float) bins);
+
+    for (int32_t i = 0; i < idx.Len; i++) {
+        DebugAssert(idx.Data[i] < bins) {
+            Panic("At index %d, idx = %"PRIu32", which is >= to "
+                  "the level, 2^%"PRIu8".", i, idx.Data[i], level);
+        }
+
+        float offset = x0 + binWidth*((float)idx.Data[i]);
+        buf.Data[i] = offset + rand_Float(state)*binWidth;
+
+        // Dealing with floating point errors:
+        float x1 = x0 + dx;
+        if (buf.Data[i] < x0) {
+            buf.Data[i] = x0;
+        } else if (buf.Data[i] >= x1) {
+            buf.Data[i] = nextafterf(x1, -INFINITY);
+        }
+    }
+
+    return buf;
 }
 
 U8Seq util_U32TransposeBytes(U32Seq x, U8Seq buf) {
