@@ -1,33 +1,40 @@
 # Author: Phil Mansfield (mansfield@uchicago.edu)
 #
 # How to run:
-# make - puts a library file in ./build
+# make - puts a library file in build/
 # make test - runs all tests and benchmarks in ./test. Assumes the existence
 #              of a particular script called runTests.py in scripts/.
 # make clean - removes temporary files and allows for a clean build.
 #
-# How to use for a new project:
-# Go to the commented areas in this file that start with a "!" and do what
-# they say.
+# This Makefile is designed so that it's easy(ish) to modify it for new
+# projects. I wholeheartedly encourage you to do this. To use for a new
+# project, go to the commented areas in this file and do what# # they say.
 
-CC=clang
+CLANG_CFLAGS=-Werror -Weverything -Wno-unused-macros -Wno-missing-prototypes -Wno-bad-function-cast -Wno-float-equal -Wno-padded -std=c99 -pedantic -O2 -g -D DEBUG
 
-#CC=gcc
-CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wcast-align -Wundef -Wredundant-decls -Wmissing-include-dirs -g -D DEBUG
+GCC_CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wcast-align -Wundef -Wredundant-decls -Wmissing-include-dirs -g -D DEBUG
 
-#CC=icc
-#CFLAGS= -O2  -g -D DEBUG -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wundef -Wmissing-include-dirs -Warray-bounds -Wcomment -Wformat -Wuninitialized -Wmain -Wnarrowing -Wnonnull -Wparentheses -Wpointer-sign -Wreorder -Wreturn-type -Wsign-compare -Wsequence-point -Wtrigraphs -Wunused-function -Wunused-but-set-variable -Wunused-variable -Wwrite-strings -w3 -wd1419,1572,2259
-# Removed icc remarks:
+# icc generally generates too many remarks (small warnings), some of which are
+# caused by very benign actions which are impossible to avoid. If you want to
+# remove more remarks, you can add to the comma-separated list at the end of
+# the flag set.
+#
+# Currently removed icc remarks:
 # 1419 - Disallows forward declarations in source files.
 # 1572 - Floating point equality and inequalities.
 # 2259 - This is a well meaning warning which warns out non-explicit casts,
 #        but it also watns about, e.g., subtracting ints.
+ICC_CFLAGS= -O2 -g -D DEBUG -Werror -std=c99 -pedantic -w3 -wd1419,1572,2259
+
+# Select the compiler and compiler flags that you want to use.
+CC=clang
+CFLAGS =$(CLANG_CFLAGS)
 
 SOURCES=$(wildcard src/*.c)
 OBJECTS=$(patsubst %.c,%.o,$(SOURCES))
 HEADERS=$(patsubst %.c,%.h,$(SOURCES))
 
-# !Change this as neccesary. If you aren't making a library, the vast majority
+# Change this as neccesary. If you aren't making a library, the vast majority
 # of this Makefile will be useless to you. Name will be build/*lib.a
 LIB_NAME=minnow
 
@@ -39,11 +46,11 @@ SO_TARGET=$(patsubst, %.a,%.so,$(TARGET))
 TEST_SOURCES=$(wildcard test/*.c)
 TESTS=$(patsubst %.c,%,$(TEST_SOURCES))
 
-# ! Location of libraries being used.
+# Location of libraries being used.
 LIBRARIES=
-# ! Flags of libraries being used.
+# Flags of libraries being used.
 LIBRARY_FLAGS=-lm
-# ! Location of .h files which should be included.
+# Location of .h files which should be included.
 INCLUDES=
 
 ifneq ($(INCLUDES),)
@@ -63,11 +70,13 @@ debug_test: test
 build:
 	mkdir -p build/
 
-src/base_seq.h: scripts/seq_gen.py Makefile resources/seq_base.h resources/seq_base.c
+src/base_seq.c: scripts/seq_gen.py Makefile resources/seq_base.c
 	python scripts/seq_gen.py c < resources/seq_base.c > src/base_seq.c
+
+src/base_seq.h: scripts/seq_gen.py Makefile resources/seq_base.h
 	python scripts/seq_gen.py h < resources/seq_base.h > src/base_seq.h
 
-# ! Extend this as needed for each object file. List dependencies that are
+# Extend this as needed for each object file. List dependencies that are
 # not the corresponding .c and .h file.
 src/seq.o: src/base_seq.h
 %.o: %.c %.h Makefile

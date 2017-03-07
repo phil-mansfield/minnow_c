@@ -23,8 +23,8 @@
  * If you want a stack trace (which you should), prefer to use Panic instead
  * of fprintf for reporting your error.
  */
-#define Assert(x) for (; !(x); assert(x))
-        
+#define Assert(x) for (int assertIncr_=1; !((x) && assertIncr_); assert(assertIncr_&=(x)))
+/* The wonky formatting here prevents clang warnings. */        
 
 /* `AssertAlloc` is an assertion which specifically checks whether an allocation
  * error has occured. Unlike Panic, it does not assume that allocators still
@@ -35,7 +35,7 @@
  */
 #define AssertAlloc(ptr) \
     do { \
-        Assert(ptr) {                                            \
+        Assert(ptr!=NULL) {                                            \
             fprintf(stderr, "%s: %s: L%d: Allocation failed\n.", \
                     __FILE__, __FUNCTION__, __LINE__);         \
             exit(1); \
@@ -68,40 +68,21 @@
  * may require dynamic memory allocation, but also kills the program, so this
  * is only a problem if your allocator is currently compromised.
  */
-#if defined(__clang__)
-#define Panic(fmt, ...) \
-    do { \
-        fprintf(stderr, "Panic at file %s, function %s, line %d:\n", \
-                __FILE__, __FUNCTION__, __LINE__);               \
-        fprintf(stderr, fmt, __VA_ARGS__); \
-        fprintf(stderr, "\n");                                   \
-        fprintf(stderr, "Stack trace:\n"); \
-        void **panicStackframes_ = calloc((size_t)100, sizeof(*panicStackframes_)); \
-        size_t panicSize_ = backtrace(panicStackframes_, 100); \
-        char **panicStrings_ = backtrace_symbols( \
-            panicStackframes_, (int)panicSize_                          \
-        );                                                              \
-        for (size_t panicIdx_ = 0; panicIdx_ < panicSize_; panicIdx_++) \
-            fprintf(stderr, "%s\n", panicStrings_[panicIdx_]);           \
-        free(panicStrings_); \
-        exit(1); \
-    } while (0)
-#else
-//#if defined(__GNUC__) || defined(__linux__)
+#if defined(__GNUC__) || defined(__linux__)
 #define Panic(fmt, ...) \
     do { \
         /* This is a bit excessive, but I'd prefer to avoid linking. */ \
         fprintf(stderr, "Panic at file %s, function %s, line %d:\n", \
                 __FILE__, __FUNCTION__, __LINE__);               \
-        fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fprintf(stderr, fmt, __VA_ARGS__); \
         fprintf(stderr, "\n"); \
         fprintf(stderr, "Stack trace:\n"); \
         void **panicStackframes_ = calloc((size_t)100, sizeof(*panicStackframes_)); \
-        size_t panicSize_ = backtrace(panicStackframes_, 100); \
+        int panicSize_ = backtrace(panicStackframes_, 100); \
         char **panicStrings_ = backtrace_symbols( \
             panicStackframes_, (int)panicSize_                          \
         );                                                              \
-        for (size_t panicIdx_ = 0; panicIdx_ < panicSize_; panicIdx_++) \
+        for (int panicIdx_ = 0; panicIdx_ < panicSize_; panicIdx_++) \
             fprintf(stderr, "%s\n", panicStrings_[panicIdx_]);           \
         free(panicStrings_); \
         exit(1); \

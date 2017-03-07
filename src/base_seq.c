@@ -2,7 +2,7 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include "seq.h"
+#include "base_seq.h"
 #include "debug.h"
 
 #define ALPHA 1.25
@@ -11,6 +11,7 @@
 /* Exported Functions */
 /**********************/
 
+ExSeq ExSeq_Empty();
 ExSeq ExSeq_Empty() {
     ExSeq s = {NULL, 0, 0};
     return s;
@@ -26,10 +27,10 @@ ExSeq ExSeq_New(int32_t len) {
     if (!len) { return s; }    
 
     /* The last four bytes are used to store the reference counter. */
-    s.Data = malloc(cap*sizeof(*s.Data) + 4);
+    s.Data = malloc((size_t)cap*sizeof(*s.Data) + 4);
     AssertAlloc(s.Data);
 
-    memset(s.Data, 0, cap*sizeof(*s.Data) + 4);
+    memset(s.Data, 0, (size_t)cap*sizeof(*s.Data) + 4);
 
     return s;
 }
@@ -88,10 +89,10 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
         s.Cap = (int32_t) (ALPHA * (float) (1 + s.Cap));
         s.Cap = ((s.Cap / 4) + (s.Cap % 4 != 0))*4;
 
-        s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4);
+        s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
         AssertAlloc(s.Data);
         /* Also resets the reference counter. */
-        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
+        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4);
     }
 
     s.Data[s.Len] = tail;
@@ -111,13 +112,13 @@ ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
         s1.Cap = (int32_t) (ALPHA * (float) (s1.Len + s2.Len));
         s1.Cap = ((s1.Cap / 4) + (s1.Cap % 4 != 0))*4;
 
-        s1.Data = realloc(s1.Data, s1.Cap*sizeof(*s1.Data) + 4);
+        s1.Data = realloc(s1.Data, (size_t)s1.Cap*sizeof(*s1.Data) + 4);
         AssertAlloc(s1.Data);
         /* Also resets the reference counter. */
-        memset(s1.Data + s1.Len, 0, s1.Cap - s1.Len + 4);
+        memset(s1.Data + s1.Len, 0, (size_t)(s1.Cap - s1.Len + 4));
     }
 
-    memcpy(s1.Data + s1.Len, s2.Data, s2.Len * sizeof(*s2.Data));
+    memcpy(s1.Data + s1.Len, s2.Data, (size_t)s2.Len * sizeof(*s2.Data));
     s1.Len +=  s2.Len;
 
     return s1;
@@ -161,13 +162,14 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
     s.Cap = ((n / 4) + (n % 4 != 0))*4;
     s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
     AssertAlloc(s.Data);
-    memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4);
+    memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4);
 
     return s;
 }
 
 
 #define GENERATE_SEQ_BODY(type, seqType) \
+    seqType seqType##_Empty(); \
     seqType seqType##_Empty() { \
         seqType s = {NULL, 0, 0}; \
         return s; \
@@ -179,9 +181,9 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
         int32_t cap = ((len / 4) + (len % 4 != 0))*4; \
         seqType s = { .Data = NULL, .Len = len, .Cap = cap}; \
         if (!len) { return s; }     \
-        s.Data = malloc(cap*sizeof(*s.Data) + 4); \
+        s.Data = malloc((size_t)cap*sizeof(*s.Data) + 4); \
         AssertAlloc(s.Data); \
-        memset(s.Data, 0, cap*sizeof(*s.Data) + 4); \
+        memset(s.Data, 0, (size_t)cap*sizeof(*s.Data) + 4); \
         return s; \
     } \
     seqType seqType##_FromArray(type *data, int32_t len) { \
@@ -228,9 +230,9 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
             } \
             s.Cap = (int32_t) (ALPHA * (float) (1 + s.Cap)); \
             s.Cap = ((s.Cap / 4) + (s.Cap % 4 != 0))*4; \
-            s.Data = realloc(s.Data, s.Cap*sizeof(*s.Data) + 4); \
+            s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4); \
             AssertAlloc(s.Data); \
-            memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4); \
+            memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4); \
         } \
         s.Data[s.Len] = tail; \
         s.Len++; \
@@ -245,11 +247,11 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
             } \
             s1.Cap = (int32_t) (ALPHA * (float) (s1.Len + s2.Len)); \
             s1.Cap = ((s1.Cap / 4) + (s1.Cap % 4 != 0))*4; \
-            s1.Data = realloc(s1.Data, s1.Cap*sizeof(*s1.Data) + 4); \
+            s1.Data = realloc(s1.Data, (size_t)s1.Cap*sizeof(*s1.Data) + 4); \
             AssertAlloc(s1.Data); \
-            memset(s1.Data + s1.Len, 0, s1.Cap - s1.Len + 4); \
+            memset(s1.Data + s1.Len, 0, (size_t)(s1.Cap - s1.Len + 4)); \
         } \
-        memcpy(s1.Data + s1.Len, s2.Data, s2.Len * sizeof(*s2.Data)); \
+        memcpy(s1.Data + s1.Len, s2.Data, (size_t)s2.Len * sizeof(*s2.Data)); \
         s1.Len +=  s2.Len; \
         return s1; \
     } \
@@ -284,7 +286,7 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
         s.Cap = ((n / 4) + (n % 4 != 0))*4; \
         s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4); \
         AssertAlloc(s.Data); \
-        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(s.Cap - s.Len) + 4); \
+        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4); \
         return s; \
     }
 

@@ -156,11 +156,11 @@ bool testNewWithCap() {
 bool testFromArray() {
     bool res = true;
 
-    struct { int32_t len; double data[8]; } tests[4] = {
-        //{-1, {3}},
-        {0, {0}},
-        {1, {3}},
-        {8, {1, 2, 3, 4, 5, 6, 7, 8}}
+    struct { double data[8]; int32_t len; } tests[4] = {
+        //{{3}, -1},
+        {{0}, 0},
+        {{3}, 1},
+        {{1, 2, 3, 4, 5, 6, 7, 8}, 8}
     };
 
     for (int i = 0; i < LEN(tests); i++) {

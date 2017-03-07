@@ -24,7 +24,7 @@ rand_State *rand_Seed(uint64_t seed, int32_t n) {
         Panic("rand_Seed given non-positive length, %"PRId32".", n);
     }
 
-    rand_State *state = calloc(n, sizeof(*state));
+    rand_State *state = calloc((size_t)n, sizeof(*state));
     AssertAlloc(state);
     state[0][0]= splitmixNext(&seed);
     state[0][1]= splitmixNext(&seed);
