@@ -30,7 +30,8 @@ ICC_CFLAGS= -O2 -g -D DEBUG -Werror -std=c99 -pedantic -w3 -wd1419,1572,2259
 CC=clang
 CFLAGS =$(CLANG_CFLAGS)
 
-SOURCES=$(wildcard src/*.c)
+# Add/remove any additional files that aren't in src at the end of this list.
+SOURCES=$(wildcard src/*.c) lz4/lib/lz4.c
 OBJECTS=$(patsubst %.c,%.o,$(SOURCES))
 HEADERS=$(patsubst %.c,%.h,$(SOURCES))
 
@@ -79,6 +80,10 @@ src/base_seq.h: scripts/seq_gen.py Makefile resources/seq_base.h
 # Extend this as needed for each object file. List dependencies that are
 # not the corresponding .c and .h file.
 src/seq.o: src/base_seq.h
+lz4/lib/lz4.o:
+	$(CC) -O3 -std=c99 -Wall -Wextra -c lz4/lib/lz4.c -o lz4/lib/lz4.o
+src/compress_util.o:
+	$(CC) -I lz4/lib $(CFLAGS) -c src/compress_util.c -o src/compress_util.o
 %.o: %.c %.h Makefile
 	$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDES_WITH_FLAG)
 
@@ -91,9 +96,9 @@ $(SO_TARGET): build $(OBJECTS) $(HEADERS)
 	$(CC) -shared -o $@ $(OBJECTS)
 
 %_test: %_test.c $(TARGET)
-	$(CC) $@.c -o $@ $(CFLAGS) -L build $(LIBRARIES) -I src $(INCLUDES) $(SELF_FLAG) $(LIBRARY_FLAGS)
+	$(CC) $@.c -o $@ $(CFLAGS) -L build $(LIBRARIES) -I src $(SELF_FLAG) $(LIBRARY_FLAGS)
 %_bench: %_bench.c $(TARGET)
-	$(CC) $@.c -o $@ $(CFLAGS) -L build $(LIBRARIES) -I src $(INCLUDES) $(SELF_FLAG) $(LIBRARY_FLAGS)
+	$(CC) $@.c -o $@ $(CFLAGS) -L build $(LIBRARIES) -I src $(SELF_FLAG) $(LIBRARY_FLAGS)
 
 test: $(TESTS) scripts/run_tests.py $(TARGET)
 	@python scripts/run_tests.py test/ test
@@ -101,7 +106,7 @@ test: $(TESTS) scripts/run_tests.py $(TARGET)
 
 clean:
 	rm -rf build/
-	rm -f  src/*.o
+	rm -f  $(OBJECTS)
 	rm -f  test/*_test
 	rm -f  test/*_bench
 	rm -rf test/*.dSYM
