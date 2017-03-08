@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "compress_util.h"
 #include "seq.h"
@@ -17,6 +18,7 @@ bool testUndoBinIndex();
 bool testUniformBinIndex();
 bool testUndoUniformBinIndex();
 bool testUniformPack();
+bool testEntropyEncode();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
@@ -34,6 +36,7 @@ int main() {
     res = res && testUniformBinIndex();
     res = res && testUndoUniformBinIndex();
     res = res && testUniformPack();
+    res = res && testEntropyEncode();
 
     return !res;
 }
@@ -535,6 +538,28 @@ bool testUniformPack() {
     free(state);
 
     return res;
+}
+
+bool testEntropyEncode() {
+    char *source = "The Hitchhiker's Guide to the Galaxy has a few things to say on the subject of towels. A towel, it says, is about the most massively useful thing an interstellar hitch hiker can have.";
+    U8Seq sourceSeq = U8Seq_FromArray(
+        (uint8_t*) source, (int32_t)strlen(source)
+    );
+    U8Seq compressed = util_EntropyEncode(sourceSeq, U8Seq_Empty());
+    U8Seq decompressed = util_UndoEntropyEncode(
+        compressed, sourceSeq.Len, U8Seq_Empty()
+    );
+
+    if (!U8SeqEqual(sourceSeq, decompressed)) {
+        fprintf(stderr, "entropy encoding garbled input string.\n");
+        return false;
+    }
+
+    U8Seq_Free(sourceSeq);
+    U8Seq_Free(compressed);
+    U8Seq_Free(decompressed);
+
+    return true;
 }
 
 /********************/
