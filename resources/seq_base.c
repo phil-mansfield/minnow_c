@@ -11,7 +11,6 @@
 /* Exported Functions */
 /**********************/
 
-ExSeq ExSeq_Empty();
 ExSeq ExSeq_Empty() {
     ExSeq s = {NULL, 0, 0};
     return s;

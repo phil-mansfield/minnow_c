@@ -11,7 +11,6 @@
 /* Exported Functions */
 /**********************/
 
-ExSeq ExSeq_Empty();
 ExSeq ExSeq_Empty() {
     ExSeq s = {NULL, 0, 0};
     return s;
@@ -169,7 +168,6 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
 
 
 #define GENERATE_SEQ_BODY(type, seqType) \
-    seqType seqType##_Empty(); \
     seqType seqType##_Empty() { \
         seqType s = {NULL, 0, 0}; \
         return s; \
