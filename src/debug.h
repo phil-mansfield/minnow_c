@@ -88,14 +88,5 @@
         exit(1); \
     } while (0)
 #endif
-//#else
-//#define Panicf(fmt, ...)                      \
-//    do {                                                              \
-//        fprintf(stderr, "%s:%s:L%d:\n", __FILE__, __FUNCTION__, __LINE__); \
-//        fprintf(stderr, fmt, ##__VA_ARGS__);                                  \
-//        fprintf(stderr, "\n");                                        \
-//        exit(1);                                                      \
-//    } while (0)
-//#endif /* __GNUC__ || __linux__ */
 
 #endif /* MNW_DEBUG_*/
