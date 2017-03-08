@@ -87,4 +87,14 @@ U32Seq util_UniformPack(U32Seq x, uint8_t width, U32Seq buf);
  * the end of this function call. */
 U32Seq util_UndoUniformPack(U32Seq x, uint8_t width, int32_t len, U32Seq buf);
 
+/* util_EntropyEncode will apply an (unspecified) entropy encoding scheme to
+ * stream of data.  */
+U8Seq util_EntropyEncode(U8Seq data, U8Seq buf);
+
+/* util_UndoEntropyEncode reverses a call to util_EntropyEncode. It must be
+ * passed the original size of the uncompressed data sequence. */
+U8Seq util_UndoEntropyEncode(
+    U8Seq compressedData, int32_t uncompressedSize, U8Seq buf
+);
+
 #endif /* MNW_COMPRESS_UTIL_H_ */

@@ -1,5 +1,6 @@
 #include "compress_util.h"
 #include "debug.h"
+#include "lz4.h"
 #include <inttypes.h>
 #include <math.h>
 
@@ -288,10 +289,41 @@ U32Seq util_UndoUniformPack(U32Seq x, uint8_t width, int32_t len, U32Seq buf) {
             uint8_t startOffset = (uint8_t) (startBit % 32);
             uint8_t endOffset = (uint8_t) (endBit % 32);
             uint32_t startFlag = 0xffffffff << startOffset;
-            uint32_t endFlag = 0xffffffff >> 32 - endOffset - 1;
+            uint32_t endFlag = 0xffffffff >> (32 - endOffset - 1);
             buf.Data[i] = (startFlag & x.Data[startInt]) >> startOffset;
             buf.Data[i] |= (endFlag & x.Data[endInt]) << (width - endOffset - 1);
         }
+    }
+
+    return buf;
+}
+
+U8Seq util_EntropyEncode(U8Seq data, U8Seq buf) {
+    int boundSize = LZ4_compressBound((int) data.Len);
+    buf = U8SeqSetLen(buf, (int32_t) boundSize);
+    int compressedSize = LZ4_compress_fast(
+        (char *)data.Data, (char *)buf.Data, data.Len, buf.Len, 1
+    );
+    DebugAssert(compressedSize) {
+        Panic("%s has failed to compress an input byte sequence.", "LZ4");
+    }
+
+    buf = U8Seq_Sub(buf, 0, (int32_t)compressedSize);
+    U8Seq_Deref(buf);
+
+    return buf;
+}
+
+U8Seq util_UndoEntropyEncode(
+    U8Seq compressedData, int32_t uncompressedSize, U8Seq buf
+) {
+    buf = U8SeqSetLen(buf, uncompressedSize);
+    int read = LZ4_decompress_fast(
+        (char*)compressedData.Data, (char*)buf.Data, (int) buf.Len
+    );
+
+    DebugAssert(read >= 0) {
+        Panic("%s has failed to decompress an input byte sequence.", "LZ4");
     }
 
     return buf;
