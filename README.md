@@ -7,4 +7,4 @@ First, we need to download the code. To do this clone the `minnow` repository us
 ```
 $ git submodule update --init --recursive
 ```
-Next, we need to compile the code. This is done by `cd`ing into the `lz4/` directory and typing `make`. Afterwards, come back to this directoy and type `make` again. And you're done.
+Next, compile the library with `make`. You can run tests with `make test` if you want (recommended).
