@@ -202,6 +202,101 @@ U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
     return buf;
 }
 
+U32Seq util_UniformPack(U32Seq x, uint8_t width, U32Seq buf) {
+    DebugAssert(width <= 32) {
+        Panic("width = %"PRIu8" specified in UniformPack.", width);
+    }
+
+    uint64_t packedBits = width * (uint64_t)x.Len;
+    int32_t len = (int32_t)(packedBits/32) + (1-(int32_t)(packedBits%32 == 0));
+    buf = U32SeqSetLen(buf, len);
+    /* Special cases which break the general version without special casing. */
+    if (buf.Len == 0) {
+        return buf;
+    } else if (width == 32) {
+        for (int32_t i = 0; i < buf.Len; i++) {
+            buf.Data[i] = x.Data[i];
+        }
+        return buf;
+    }
+
+    for (int32_t i = 0; i < buf.Len; i++) {
+        buf.Data[i] = 0;
+    }
+
+    uint32_t widthFlag = ~(0xffffffff << width);
+
+    for (int32_t i = 0; i < x.Len; i++) {
+        uint32_t val = x.Data[i];
+
+        uint64_t startBit = width * (uint64_t)i;
+        int32_t startInt = (int32_t) (startBit / 32);
+        uint64_t endBit = width * (1 + (uint64_t)i) - 1;
+        int32_t endInt = (int32_t) (endBit / 32);
+
+        if (startInt == endInt) {
+            buf.Data[startInt] |= (val & widthFlag) << (startBit % 32);
+        } else {
+            uint32_t fval = val & widthFlag;
+            uint8_t startOffset = (uint8_t) (startBit % 32);
+            uint8_t endOffset = (uint8_t) (endBit % 32);
+            buf.Data[startInt] |= fval << (startOffset);
+            buf.Data[endInt] |= fval >> (width - 1 - endOffset);
+        }
+    }
+
+    return buf;
+}
+
+U32Seq util_UndoUniformPack(U32Seq x, uint8_t width, int32_t len, U32Seq buf) {
+    DebugAssert(width <= 32) {
+        Panic("width = %"PRIu8" specified in UndoUniformPack.", width);
+    }
+
+    buf = U32SeqSetLen(buf, len);
+    /* Special cases which break the general version without special casing. */
+    if (len == 0) {
+        return U32Seq_Empty();
+    } else if (width == 32) {
+        for (int32_t i = 0; i < buf.Len; i++) {
+            buf.Data[i] = x.Data[i];
+        }
+        return buf;
+    }
+
+    for (int32_t i = 0; i < buf.Len; i++) {
+        buf.Data[i] = 0;
+    }
+
+    if (width == 0) {
+        return buf;
+    }
+
+    uint32_t widthFlag = ~(0xffffffff << width);
+
+    for (int32_t i = 0; i < buf.Len; i++) {
+        uint64_t startBit = width * (uint64_t)i;
+        int32_t startInt = (int32_t) (startBit / 32);
+        uint64_t endBit = width * (1 + (uint64_t)i) - 1;
+        int32_t endInt = (int32_t) (endBit / 32);
+
+        if (startInt == endInt) {
+            uint8_t startOffset = startBit % 32;
+            buf.Data[i] = ((x.Data[startInt] & (widthFlag << startOffset)) >> 
+                           startOffset);
+        } else {
+            uint8_t startOffset = (uint8_t) (startBit % 32);
+            uint8_t endOffset = (uint8_t) (endBit % 32);
+            uint32_t startFlag = 0xffffffff << startOffset;
+            uint32_t endFlag = 0xffffffff >> 32 - endOffset - 1;
+            buf.Data[i] = (startFlag & x.Data[startInt]) >> startOffset;
+            buf.Data[i] |= (endFlag & x.Data[endInt]) << (width - endOffset - 1);
+        }
+    }
+
+    return buf;
+}
+
 /********************/
 /* Helper Functions */
 /********************/

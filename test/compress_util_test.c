@@ -16,6 +16,7 @@ bool testBinIndex();
 bool testUndoBinIndex();
 bool testUniformBinIndex();
 bool testUndoUniformBinIndex();
+bool testUniformPack();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
@@ -32,6 +33,7 @@ int main() {
     res = res && testUndoBinIndex();
     res = res && testUniformBinIndex();
     res = res && testUndoUniformBinIndex();
+    res = res && testUniformPack();
 
     return !res;
 }
@@ -277,19 +279,20 @@ bool testUndoBinIndex() {
 
     struct {
         uint32_t idx[8];
-        uint8_t level;
+        uint8_t level[8];
         int32_t len;
         float x0, dx;
     } tests[] = {
-        {{0}, 0, 0, 0, 16},
-        {{0}, 0, 1, 0, 16},
-        {{0, 1, 2, 3, 4, 5, 6, 7}, 4, 8, -4, 8},
+        {{0}, {0}, 0, 0, 16},
+        {{0}, {0}, 1, 0, 16},
+        {{0, 1, 2, 3, 4, 5, 6, 7}, {0, 1, 2, 3, 4, 4, 4, 4}, 8, -4, 8},
     };
 
     rand_State *state = rand_Seed(0, 1);
 
     for (int32_t i = 0; i < LEN(tests); i++) {
         U32Seq idx = U32Seq_FromArray(tests[i].idx, tests[i].len);
+        U8Seq level = U8Seq_FromArray(tests[i].level, tests[i].len);
         FSeq buf = FSeq_New(3);
 
         FSeq x = util_UndoBinIndex(
@@ -312,6 +315,7 @@ bool testUndoBinIndex() {
         FSeq_Free(x);
         U32Seq_Free(idx2);
         U32Seq_Free(idx);
+        U8Seq_Free(level);
     }
 
     free(state);
@@ -367,6 +371,170 @@ bool testUniformBinIndex() {
 }
 
 bool testUndoUniformBinIndex() {
+    bool res = true;
+
+    struct {
+        uint32_t idx[8];
+        uint8_t level;
+        int32_t len;
+        float x0, dx;
+    } tests[] = {
+        {{0}, 0, 0, 0, 16},
+        {{0}, 0, 1, 0, 16},
+        {{0, 1, 2, 3, 4, 5, 6, 7}, 4, 8, -4, 8},
+    };
+
+    rand_State *state = rand_Seed(0, 1);
+
+    for (int32_t i = 0; i < LEN(tests); i++) {
+        U32Seq idx = U32Seq_FromArray(tests[i].idx, tests[i].len);
+        FSeq buf = FSeq_New(3);
+
+        FSeq x = util_UndoUniformBinIndex(
+            idx, tests[i].level, tests[i].x0, tests[i].dx, state, buf
+        );
+        U32Seq idx2 = util_UniformBinIndex(
+            x, tests[i].level, tests[i].x0, tests[i].dx, U32Seq_Empty()
+        );
+
+        if (!U32SeqEqual(idx, idx2)) {
+            fprintf(stderr, "In test %d of testUndoBinIndex(), expected "
+                    "output of util_BinIndex() to be ", i);
+            U32SeqPrint(idx);
+            fprintf(stderr, ", but got ");
+            U32SeqPrint(idx2);
+            fprintf(stderr, ".\n");
+            res = false;            
+        }
+
+        FSeq_Free(x);
+        U32Seq_Free(idx2);
+        U32Seq_Free(idx);
+    }
+
+    free(state);
+
+    return res;
+}
+
+bool testUniformPack() {
+    bool res = true;
+
+    struct {
+        uint32_t unpacked[4];
+        int32_t ulen;
+        uint32_t packed[4];
+        int32_t plen;
+        uint8_t width;
+    } tests[] = {
+        {{0}, 0, {0}, 0, 32},
+        {{0x12345678}, 1, {0}, 0, 0},
+        {{0x12345678}, 1, {0x8}, 1, 4},
+        {{0x12345678}, 1, {0x78}, 1, 8},
+        {{0x12345678}, 1, {0x678}, 1, 12},
+        {{0x12345678}, 1, {0x12345678}, 1, 32},
+        {{0xaa, 0xbb}, 2, {0xbbaa}, 1, 8},
+        {{0xaa, 0xbb}, 2, {0xbb00aa}, 1, 16},
+        {{0xaa, 0xbb}, 2, {0xbb0aa}, 1, 12},
+        {{3, 2, 3}, 3, {5}, 1, 1},
+        {{0xaaaaaaaa, 0xbbbbbbbb}, 2, {0xaaaaaaaa, 0xbbbbbbbb}, 2, 32},
+        {{0x87654321, 0x87654321}, 2, {0x17654321, 0x765432}, 2, 28},
+        {{0xaaaaaa, 0xbbbbbb, 0xcccccc, 0xdddddd}, 4,
+         {0xbbaaaaaa, 0xccccbbbb, 0xddddddcc}, 3, 24}
+    };
+
+    for (int i = 0; i < LEN(tests); i++) {
+        U32Seq unpacked = U32Seq_FromArray(tests[i].unpacked, tests[i].ulen);
+        U32Seq packed = U32Seq_FromArray(tests[i].packed, tests[i].plen);
+        int32_t len = tests[i].ulen;
+        uint8_t width = tests[i].width;
+
+        U32Seq packedBuf = U32Seq_New(2);
+        U32Seq unpackedBuf = U32Seq_New(2);
+
+        U32Seq outPacked = util_UniformPack(unpacked, width, packedBuf);
+        U32Seq outUnpacked = util_UndoUniformPack(
+            packed, width, len, unpackedBuf
+        );
+
+        if(!U32SeqEqual(outPacked, packed)) {
+            fprintf(stderr, "Expected util_UniformPack(");
+            U32SeqPrint(unpacked);
+            fprintf(stderr, ", %"PRIu8") to return ", width);
+            U32SeqPrint(packed);
+            fprintf(stderr, ", but got ");
+            U32SeqPrint(outPacked);
+            fprintf(stderr, "\n");
+            res = false;
+        }
+
+        uint32_t widthFlag = 0xffffffff;
+        if (width != 32) {
+            widthFlag = ~( widthFlag << width);
+        }
+        for (int32_t j = 0; j < unpacked.Len; j++) {
+            unpacked.Data[j] &= widthFlag;
+        }
+
+        if(!U32SeqEqual(outUnpacked, unpacked)) {
+            fprintf(stderr, "Expected util_UndoUniformPack(");
+            U32SeqPrint(packed);
+            fprintf(stderr, ", %"PRIu8", %"PRIu32") to return ", width, len);
+            U32SeqPrint(unpacked);
+            fprintf(stderr, ", but got ");
+            U32SeqPrint(outUnpacked);
+            fprintf(stderr, "\n");
+            res = false;
+        }
+
+        U32Seq_Free(packed);
+        U32Seq_Free(outPacked);
+        U32Seq_Free(unpacked);
+        U32Seq_Free(outUnpacked);
+    }
+
+    if(!res) {
+        return res;
+    }
+
+    rand_State *state = rand_Seed(0, 1);
+
+    /* Large randomized tests. */
+    for (uint8_t width = 0; width <= 32; width++) {
+        for (int32_t len = 0; len < 2; len++) {
+            U32Seq unpacked = U32Seq_New(len);
+            for (int32_t j = 0; j < unpacked.Len; j++) {
+                unpacked.Data[j] = (uint32_t) rand_Uint64(state);
+            }
+            U32Seq packed = util_UniformPack(unpacked, width, U32Seq_Empty());
+            U32Seq outUnpacked = util_UndoUniformPack(
+                packed, width, len, U32Seq_Empty()
+            );
+
+            uint32_t widthFlag = 0xffffffff;
+            if (width != 32) {
+                widthFlag = ~( widthFlag << width);
+            }
+            for (int32_t j = 0; j < unpacked.Len; j++) {
+                unpacked.Data[j] &= widthFlag;
+            }
+
+            if (!U32SeqEqual(unpacked, outUnpacked)) {
+                fprintf(stderr, "width = %"PRIu8", len = %"PRId32" randomized"
+                        "test failed.\n", width, len);
+
+                res = false;
+            }
+
+            U32Seq_Free(unpacked);
+            U32Seq_Free(packed);
+            U32Seq_Free(outUnpacked);
+        }
+    }
+
+    free(state);
+
+    return res;
 }
 
 /********************/
