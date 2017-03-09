@@ -72,20 +72,22 @@ U8Seq util_U8DeltaEncode(U8Seq x, U8Seq buf);
  * place. */
 U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf);
 
-/* util_UniformPack stores the least significant bits of a seqeunce of
+/* util_u32UniformPack stores the least significant bits of a seqeunce of
  * integers in contiguous order. The number of bits stored per integer is
  * given by width. Any extra bits in the output byte sequence will be set to
  * zero. A buffer may be supplied to this function to prevent
  * unneccessary heap allocations. You may not assume that a reference to this
  * buffer continues to exist after the end of this function call.*/
-U32Seq util_UniformPack(U32Seq x, uint8_t width, U32Seq buf);
+U32Seq util_U32UniformPack(U32Seq x, uint8_t width, U32Seq buf);
 
-/* util_UndoUniformPack reverses the results of a call to util_UniformPack.
- * The number of elements in the original seqeunce is given by len. A buffer
- * may be supplied to this function to prevent unneccessary heap allocations.
- * You may not assume that a reference to this buffer continues to exist after
- * the end of this function call. */
-U32Seq util_UndoUniformPack(U32Seq x, uint8_t width, int32_t len, U32Seq buf);
+/* util_U32UndoUniformPack reverses the results of a call to
+ * util_U32UniformPack. The number of elements in the original seqeunce is
+ * given by len. A buffer may be supplied to this function to prevent
+ * unneccessary heap allocations. You may not assume that a reference to this
+ * buffer continues to exist after the end of this function call. */
+U32Seq util_U32UndoUniformPack(
+    U32Seq x, uint8_t width, int32_t len, U32Seq buf
+);
 
 /* util_EntropyEncode will apply an (unspecified) entropy encoding scheme to
  * stream of data.  */

@@ -203,7 +203,7 @@ U8Seq util_U8UndoDeltaEncode(U8Seq x, U8Seq buf) {
     return buf;
 }
 
-U32Seq util_UniformPack(U32Seq x, uint8_t width, U32Seq buf) {
+U32Seq util_U32UniformPack(U32Seq x, uint8_t width, U32Seq buf) {
     DebugAssert(width <= 32) {
         Panic("width = %"PRIu8" specified in UniformPack.", width);
     }
@@ -249,7 +249,9 @@ U32Seq util_UniformPack(U32Seq x, uint8_t width, U32Seq buf) {
     return buf;
 }
 
-U32Seq util_UndoUniformPack(U32Seq x, uint8_t width, int32_t len, U32Seq buf) {
+U32Seq util_U32UndoUniformPack(
+    U32Seq x, uint8_t width, int32_t len, U32Seq buf
+) {
     DebugAssert(width <= 32) {
         Panic("width = %"PRIu8" specified in UndoUniformPack.", width);
     }
@@ -291,7 +293,7 @@ U32Seq util_UndoUniformPack(U32Seq x, uint8_t width, int32_t len, U32Seq buf) {
             uint32_t startFlag = 0xffffffff << startOffset;
             uint32_t endFlag = 0xffffffff >> (32 - endOffset - 1);
             buf.Data[i] = (startFlag & x.Data[startInt]) >> startOffset;
-            buf.Data[i] |= (endFlag & x.Data[endInt]) << (width - endOffset - 1);
+            buf.Data[i] |= (endFlag&x.Data[endInt]) << (width - endOffset - 1);
         }
     }
 
