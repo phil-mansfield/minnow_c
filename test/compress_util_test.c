@@ -17,7 +17,7 @@ bool testBinIndex();
 bool testUndoBinIndex();
 bool testUniformBinIndex();
 bool testUndoUniformBinIndex();
-bool testUniformPack();
+bool testU32UniformPack();
 bool testEntropyEncode();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
@@ -35,7 +35,7 @@ int main() {
     res = res && testUndoBinIndex();
     res = res && testUniformBinIndex();
     res = res && testUndoUniformBinIndex();
-    res = res && testUniformPack();
+    res = res && testU32UniformPack();
     res = res && testEntropyEncode();
 
     return !res;
@@ -420,7 +420,7 @@ bool testUndoUniformBinIndex() {
     return res;
 }
 
-bool testUniformPack() {
+bool testU32UniformPack() {
     bool res = true;
 
     struct {
@@ -455,13 +455,13 @@ bool testUniformPack() {
         U32Seq packedBuf = U32Seq_New(2);
         U32Seq unpackedBuf = U32Seq_New(2);
 
-        U32Seq outPacked = util_UniformPack(unpacked, width, packedBuf);
-        U32Seq outUnpacked = util_UndoUniformPack(
+        U32Seq outPacked = util_U32UniformPack(unpacked, width, packedBuf);
+        U32Seq outUnpacked = util_U32UndoUniformPack(
             packed, width, len, unpackedBuf
         );
 
         if(!U32SeqEqual(outPacked, packed)) {
-            fprintf(stderr, "Expected util_UniformPack(");
+            fprintf(stderr, "Expected util_U32UniformPack(");
             U32SeqPrint(unpacked);
             fprintf(stderr, ", %"PRIu8") to return ", width);
             U32SeqPrint(packed);
@@ -480,7 +480,7 @@ bool testUniformPack() {
         }
 
         if(!U32SeqEqual(outUnpacked, unpacked)) {
-            fprintf(stderr, "Expected util_UndoUniformPack(");
+            fprintf(stderr, "Expected util_U32UndoUniformPack(");
             U32SeqPrint(packed);
             fprintf(stderr, ", %"PRIu8", %"PRIu32") to return ", width, len);
             U32SeqPrint(unpacked);
@@ -509,8 +509,8 @@ bool testUniformPack() {
             for (int32_t j = 0; j < unpacked.Len; j++) {
                 unpacked.Data[j] = (uint32_t) rand_Uint64(state);
             }
-            U32Seq packed = util_UniformPack(unpacked, width, U32Seq_Empty());
-            U32Seq outUnpacked = util_UndoUniformPack(
+            U32Seq packed = util_U32UniformPack(unpacked, width, U32Seq_Empty());
+            U32Seq outUnpacked = util_U32UndoUniformPack(
                 packed, width, len, U32Seq_Empty()
             );
 
