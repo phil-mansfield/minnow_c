@@ -10,7 +10,7 @@
 # projects. I wholeheartedly encourage you to do this. To use for a new
 # project, go to the commented areas in this file and do what# # they say.
 
-CLANG_CFLAGS=-Werror -Weverything -Wno-unused-macros -Wno-missing-prototypes -Wno-bad-function-cast -Wno-float-equal -Wno-padded -std=c99 -pedantic -O2 -g -D DEBUG
+CLANG_CFLAGS=-Werror -Weverything -Wno-unused-macros -Wno-missing-prototypes -Wno-bad-function-cast -Wno-float-equal -Wno-padded -std=c99 -pedantic -g -D DEBUG  -O2
 
 GCC_CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wcast-align -Wundef -Wredundant-decls -Wmissing-include-dirs -g -D DEBUG
 

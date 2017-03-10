@@ -10,7 +10,7 @@
 
 #define LEN(x) ((int) (sizeof(x) / sizeof(*x)))
 
-int32_t refCount(DSeq s);
+int32_t refCount(ExSeq s);
 bool testNew();
 bool testNewWithCap();
 bool testFromArray();
@@ -37,25 +37,25 @@ int main() {
 bool testNew() {
     bool res = true;
 
-    DSeq s = DSeq_New(0);
+    ExSeq s = ExSeq_New(0);
     if (s.Len != 0 || s.Cap != 0) {
         res = false;
         fprintf(stderr, "New(0) -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", s.Len, s.Cap);
     }
 
-    DSeq_Free(s);
+    ExSeq_Free(s);
 
-    s = DSeq_New(3);
+    s = ExSeq_New(3);
     if (s.Len != 3 || s.Cap < 3) {
         res = false;
         fprintf(stderr, "New(3) -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", s.Len, s.Cap);
     }
 
-    DSeq_Free(s);
+    ExSeq_Free(s);
 
-    s = DSeq_New(1 << 20);
+    s = ExSeq_New(1 << 20);
     if (s.Len != 1 << 20 || s.Cap != 1 << 20) {
         res = false;
         fprintf(stderr, "New(%"PRId32") -> {Len: %"PRId32", Cap: %"
@@ -71,11 +71,11 @@ bool testNew() {
         }
     }
 
-    DSeq_Free(s);
+    ExSeq_Free(s);
 
     /* Calls that should crash: */
 
-    // DSeq_New(-1);
+    // ExSeq_New(-1);
 
     return res;
 }
@@ -83,25 +83,25 @@ bool testNew() {
 bool testNewWithCap() {
     bool res = true;
 
-    DSeq s = DSeq_NewWithCap(0, 0);
+    ExSeq s = ExSeq_NewWithCap(0, 0);
     if (s.Len != 0 || s.Cap != 0) {
         res = false;
         fprintf(stderr, "Expected NewWithCap(0, 0) -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", s.Len, s.Cap);
     }
 
-    DSeq_Free(s);
+    ExSeq_Free(s);
 
-    s = DSeq_NewWithCap(0, 3);
+    s = ExSeq_NewWithCap(0, 3);
     if (s.Len != 0 || s.Cap < 3) {
         res = false;
         fprintf(stderr, "Expected NewWithCap(0, 3) -> {Len: %"PRId32", Cap: %"
                 PRId32"}.\n", s.Len, s.Cap);
     }
 
-    DSeq_Free(s);
+    ExSeq_Free(s);
 
-    s = DSeq_NewWithCap(10, 1 << 20);
+    s = ExSeq_NewWithCap(10, 1 << 20);
     if (s.Len != 10 || s.Cap != 1 << 20) {
         res = false;
         fprintf(stderr, "Expected New(%"PRId32", %"PRId32") -> {Len: %"
@@ -117,10 +117,10 @@ bool testNewWithCap() {
         }
     }
 
-    DSeq_Free(s);
+    ExSeq_Free(s);
 
-    // DSeq_NewWithCap(-1, 10);
-    // DSeq_NewWithCap(20, 10);
+    // ExSeq_NewWithCap(-1, 10);
+    // ExSeq_NewWithCap(20, 10);
 
     return res;
 }
@@ -136,7 +136,7 @@ bool testFromArray() {
     };
 
     for (int i = 0; i < LEN(tests); i++) {
-        DSeq s = DSeq_FromArray(tests[i].data, tests[i].len);
+        ExSeq s = ExSeq_FromArray(tests[i].data, tests[i].len);
         
         if (s.Len != tests[i].len || s.Cap < tests[i].len) {
             res = false;
@@ -154,7 +154,7 @@ bool testFromArray() {
             }
         }
 
-        DSeq_Free(s);
+        ExSeq_Free(s);
     }
     
     return res;
@@ -162,24 +162,24 @@ bool testFromArray() {
 
 bool testSub() {
     double data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    DSeq s = DSeq_FromArray(data, LEN(data));
+    ExSeq s = ExSeq_FromArray(data, LEN(data));
     s.Len = 4;
 
     struct {int32_t start, end, subLen, subCap;
-        double sub[8]; DSeq out;} tests[4] = {
-        //{-1, 0, 0, 0, {0}, DSeq_Empty()},
-        //{0, 9, 0, 0, {0}, DSeq_Empty()},
-        //{3, 0, 0, 0, {0}, DSeq_Empty()},
-        {0, 4, 4, 8, {1, 2, 3, 4}, DSeq_Empty()},
-        {0, 0, 0, 8, {0}, DSeq_Empty()},
-        {0, 8, 8, 8, {1, 2, 3, 4, 5, 6, 7, 8}, DSeq_Empty()},
-        {2, 5, 3, 6, {3, 4, 5}, DSeq_Empty()},
+        double sub[8]; ExSeq out;} tests[4] = {
+        //{-1, 0, 0, 0, {0}, ExSeq_Empty()},
+        //{0, 9, 0, 0, {0}, ExSeq_Empty()},
+        //{3, 0, 0, 0, {0}, ExSeq_Empty()},
+        {0, 4, 4, 8, {1, 2, 3, 4}, ExSeq_Empty()},
+        {0, 0, 0, 8, {0}, ExSeq_Empty()},
+        {0, 8, 8, 8, {1, 2, 3, 4, 5, 6, 7, 8}, ExSeq_Empty()},
+        {2, 5, 3, 6, {3, 4, 5}, ExSeq_Empty()},
     };
 
     bool res = true;
 
     for (int i = 0; i < LEN(tests); i++) {
-        DSeq out = DSeq_Sub(s, tests[i].start, tests[i].end);
+        ExSeq out = ExSeq_Sub(s, tests[i].start, tests[i].end);
 
         if (out.Len != tests[i].subLen) {
             res = false;
@@ -200,7 +200,7 @@ bool testSub() {
         tests[i].out = out;
     }
     
-    DSeq_Free(tests[3].out);
+    ExSeq_Free(tests[3].out);
 
     return res;
 }
@@ -219,10 +219,10 @@ bool testAppend() {
 
     for (int i = 0; i < LEN(tests); i++) {
         double base[8] = {3, 3, 3, 3, 3, 3, 3, 3};
-        DSeq s = DSeq_FromArray(base, tests[i].baseLen);
+        ExSeq s = ExSeq_FromArray(base, tests[i].baseLen);
 
         for (int j = 0; j < tests[i].n; j++) {
-            s = DSeq_Append(s, 4);
+            s = ExSeq_Append(s, 4);
         }
 
         if (s.Len != tests[i].n + tests[i].baseLen) {
@@ -247,7 +247,7 @@ bool testAppend() {
             }
         }
 
-        DSeq_Free(s);
+        ExSeq_Free(s);
     }
 
     return res;
@@ -280,13 +280,13 @@ bool testJoin() {
     bool res = true;
 
     for (int i = 0; i < LEN(tests); i++) {
-        DSeq s1 = DSeq_NewWithCap(tests[i].n1, tests[i].cap1);
+        ExSeq s1 = ExSeq_NewWithCap(tests[i].n1, tests[i].cap1);
         for (int32_t j = 0; j < s1.Len; j++) {
             s1.Data[j] = tests[i].data1[j];
         }
-        DSeq s2 = DSeq_FromArray(tests[i].data2, tests[i].n2);
+        ExSeq s2 = ExSeq_FromArray(tests[i].data2, tests[i].n2);
 
-        s1 = DSeq_Join(s1, s2);
+        s1 = ExSeq_Join(s1, s2);
         
         if (s1.Len != tests[i].n1 + tests[i].n2 ) {
             fprintf(stderr, "For test %d of testJoin(), expected length %"
@@ -303,8 +303,8 @@ bool testJoin() {
             }
         }
 
-        DSeq_Free(s1);
-        DSeq_Free(s2);
+        ExSeq_Free(s1);
+        ExSeq_Free(s2);
     }
 
     return res;
@@ -326,8 +326,8 @@ bool testExtend() {
     };
 
     for (int i = 0; i < LEN(tests); i++) {
-        DSeq s = DSeq_NewWithCap(tests[i].len, tests[i].cap);
-        s = DSeq_Extend(s, tests[i].newCap);
+        ExSeq s = ExSeq_NewWithCap(tests[i].len, tests[i].cap);
+        s = ExSeq_Extend(s, tests[i].newCap);
 
         if (s.Cap < tests[i].newCap) {
             res = false;
@@ -335,7 +335,7 @@ bool testExtend() {
                     PRId32".", i, s.Cap);
         }
 
-        DSeq_Free(s);
+        ExSeq_Free(s);
     }
 
     return res;

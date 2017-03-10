@@ -31,7 +31,7 @@ ExSeq ExSeq_New(int32_t len) {
 
     memset(s.Data, 0, (size_t)cap*sizeof(*s.Data) + 4);
     int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
-    *capPtr = len;
+    *capPtr = s.Cap;
 
     return s;
 }
@@ -45,7 +45,6 @@ ExSeq ExSeq_FromArray(Example *data, int32_t len) {
     for (int32_t i = 0; i < len; i++) {
         s.Data[i] = data[i];
     }
-
     return s;
 }
 
@@ -64,9 +63,11 @@ ExSeq ExSeq_NewWithCap(int32_t len, int32_t cap) {
 }
 
 void ExSeq_Free(ExSeq s) {
+    if ( s.Data == NULL) { return; }
+  
     int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
-    DebugAssert(*capPtr >= s.Cap) {
-        Panic("*capPtr = %"PRId32", but s.Cap = %"PRId32".", *capPtr, s.Cap);
+    DebugAssert(!capPtr || *capPtr >= s.Cap) {
+	    Panic("*capPtr = %"PRId32", but s.Cap = %"PRId32".", *capPtr, s.Cap);
     }
     free(s.Data - (*capPtr - s.Cap));
     s.Data = NULL; /* To make errors easier to find. */
@@ -76,7 +77,7 @@ void ExSeq_Free(ExSeq s) {
 ExSeq ExSeq_Append(ExSeq s, Example tail) {
     if (s.Len == s.Cap) {
         int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
-        DebugAssert(*capPtr == s.Cap) {
+        DebugAssert(!capPtr || *capPtr == s.Cap) {
             Panic("Appending to a subsequence.%s", "");
         }
 
@@ -100,7 +101,7 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
 ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
     if (s1.Len + s2.Len  > s1.Cap) {
         int32_t *capPtr = (int32_t*)(void*)(s1.Data + s1.Cap);
-        DebugAssert(*capPtr == s1.Cap) {
+        DebugAssert(!capPtr || *capPtr == s1.Cap) {
             Panic("Appending to a subsequence.%s", "");
         }
 
@@ -158,6 +159,5 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
 
     int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
     *capPtr = s.Cap;
-
     return s;
 }
