@@ -2,6 +2,7 @@
 #include "seq.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #define LEN(x) ((int)(sizeof(x) / sizeof(x[0])))
 
@@ -59,7 +60,7 @@ bool testCheckParticles() {
         //{0, 0, 0, 3, {0, 4, 0}, 3},
         //{0, 0, 0, 0, {3, 4, 0}, 3},
     };
-
+	
     for (int i = 0; i < LEN(tests); i++){
         algo_Particles p;
         for (int j = 0; j < 3; j++) {
@@ -73,7 +74,7 @@ bool testCheckParticles() {
         for (int32_t j = 0; j < tests[i].fVarLen; j++) {
             p.FVars.Data[j] = FSeq_New(tests[i].fVar[j]);
         }
-        p.U64Vars = U64SeqSeq_New(tests[i].fVarLen);
+        p.U64Vars = U64SeqSeq_New(tests[i].u64VarLen);
         for (int32_t j = 0; j < tests[i].u64VarLen; j++) {
             p.U64Vars.Data[j] = U64Seq_New(tests[i].u64Var[j]);
         }
