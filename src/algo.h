@@ -24,7 +24,7 @@ typedef struct algo_CompressedParticles {
 
 algo_CompressedParticles EmptyCompressedParticles;
 
-typedef struct algo_Info {
+typedef struct algo_Accuracy {
     float Accuracy;
     FSeq Accuracies;
 } algo_Info;
