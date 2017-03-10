@@ -11,14 +11,15 @@ typedef struct algo_Particles {
     FSeq Velocity[3];
     U64Seq ID64;
     U32Seq ID32;
-    FSeqSeq Variables;
+    FSeqSeq FVars;
+    U64SeqSeq U64Vars;
 } algo_Particles;
 
 algo_Particles algo_EmptyParticles;
 
 typedef struct algo_CompressedParticles {
     U8SeqSeq Blocks;
-    int32_t Num, VariableNum;
+    int32_t ParticleNum, FVarsNum, U64VarsNum;
     bool HasPosition, HasVeclocity, HasID64, HasID32;
 } algo_CompressedParticles;
 
@@ -27,7 +28,16 @@ algo_CompressedParticles EmptyCompressedParticles;
 typedef struct algo_Accuracy {
     float Accuracy;
     FSeq Accuracies;
+    float Bound;
+    bool LogScale;
 } algo_Accuracy;
+
+typedef struct algo_ParticleAccuracy {
+    algo_Accuracy Position;
+    algo_Accuracy Velocity;
+    algo_Accuracy *FVars;
+    
+} algo_ParticleAccuracy;
 
 /*********************/
 /* Utility Functions */

@@ -6,16 +6,18 @@
 #include <stdint.h>
 
 typedef struct {
-    algo_Accuracy Acc;
+    algo_ParticleAccuracy Accuracy;
     uint64_t ParticleCbrt;
+    bool UniformGridIDs;
 } algoQ_Info;
 
 typedef struct {
-    U32Seq QuantizedVals;
+    U32Seq Quantized;
+    FSeq Log;
 } algoQ_CompressState;
 
 typedef struct {
-    U32Seq QuantizedVals;
+    U32Seq Quantized;
 } algoQ_DecompressState;
 
 algo_CompressedParticles algoQ_Compress(

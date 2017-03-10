@@ -50,17 +50,31 @@ void algo_CheckParticles(algo_Particles p) {
               "the %s sequence is %"PRId32".", p.ID32.Len, anchorName, len);
     }
 
-    for (int32_t i = 0; i < p.Variables.Len; i++) {
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
         if (len == 0) {
-            len = p.Variables.Data[i].Len;
+            len = p.FVars.Data[i].Len;
             char anchorNameBuf[128];
-            sprintf(anchorNameBuf, "variables[%"PRId32"]", i);
+            sprintf(anchorNameBuf, "FVars[%"PRId32"]", i);
             anchorName = anchorNameBuf;
-        } else if (p.Variables.Data[i].Len != len &&
-                   p.Variables.Data[i].Len != 0) {
-            Panic("The length of the variables[%"PRId32"] sequence is %"PRId32
+        } else if (p.FVars.Data[i].Len != len &&
+                   p.FVars.Data[i].Len != 0) {
+            Panic("The length of the FVars[%"PRId32"] sequence is %"PRId32
                   ", but the length of the %s sequence is %"PRId32".",
-                  i, p.Variables.Data[i].Len, anchorName, len);
+                  i, p.FVars.Data[i].Len, anchorName, len);
+        }
+    }
+
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        if (len == 0) {
+            len = p.U64Vars.Data[i].Len;
+            char anchorNameBuf[128];
+            sprintf(anchorNameBuf, "U64Vars[%"PRId32"]", i);
+            anchorName = anchorNameBuf;
+        } else if (p.U64Vars.Data[i].Len != len &&
+                   p.U64Vars.Data[i].Len != 0) {
+            Panic("The length of the U64Vars[%"PRId32"] sequence is %"PRId32
+                  ", but the length of the %s sequence is %"PRId32".",
+                  i, p.U64Vars.Data[i].Len, anchorName, len);
         }
     }
 

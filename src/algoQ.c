@@ -1,4 +1,4 @@
-#include "algo_quantize.h"
+#include "algoQ.h"
 #include "algo.h"
 
 /************************/
@@ -7,13 +7,16 @@
 
 int32_t CountBlocks(algo_Particles p);
 U8Seq QuantizeFloat(
-    FSeq x, algoQ_Info info, algoQ_CompressState state, U8Seq buf
+    FSeq x, algo_Accuracy acc, algoQ_CompressState state, U8Seq buf
+);
+U8Seq QuantizeU64(
+    FSeq x, algoQ_CompressState state, U8Seq buf
 );
 U8Seq QuantizeU64ID(
     U64Seq id, int dim, algoQ_Info info, algoQ_CompressState state, U8Seq buf
 );
 U8Seq QuantizeU32ID(
-    U32Seq id, int dim, algoQ_Info info,  algoQ_CompressState state, U8Seq buf
+    U32Seq id, int dim, algoQ_Info info, algoQ_CompressState state, U8Seq buf
 );
 
 /**********************/
@@ -31,13 +34,15 @@ algo_CompressedParticles algoQ_Compress(
     buf.Blocks = U8SeqSeq_Sub(buf.Blocks, 0, numBlocks);
     U8SeqSeq_Deref(buf.Blocks);
 
+    /* Loop through all the fields, and compress them if they exist. */
     int32_t blockIdx = 0;
 
     /* Positions */
     if (p.Position[0].Len > 0) {
         for (int i = 0; i < 3; i++) {
             buf.Blocks.Data[blockIdx] = QuantizeFloat(
-                p.Position[i], info, state, buf.Blocks.Data[blockIdx]
+                p.Position[i], info.Accuracy.Position,
+                state, buf.Blocks.Data[blockIdx]
             );
             blockIdx++;
         }
@@ -47,7 +52,8 @@ algo_CompressedParticles algoQ_Compress(
     if (p.Velocity[0].Len > 0) {
         for (int i = 0; i < 3; i++) {
             buf.Blocks.Data[blockIdx] = QuantizeFloat(
-                p.Velocity[i], info, state, buf.Blocks.Data[blockIdx]
+                p.Velocity[i], info.Accuracy.Velocity,
+                state, buf.Blocks.Data[blockIdx]
             );
             blockIdx++;
         }
@@ -73,14 +79,21 @@ algo_CompressedParticles algoQ_Compress(
     }
 
     /* Misc variables */
-    for (int32_t i = 0; i < p.Variables.Len; i++) {
-        if (p.Variables.Data[i].Len > 0) {
-            buf.Blocks.Data[blockIdx] = QuantizeFloat(
-                p.Variables.Data[i], info, state, buf.Blocks.Data[blockIdx]
-            );
-            blockIdx++;
-        }
-            
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        /* No conditioning over non-zero length variables here. */
+        buf.Blocks.Data[blockIdx] = QuantizeFloat(
+            p.FVars.Data[i], info.Accuracy.FVars[i],
+            state, buf.Blocks.Data[blockIdx]
+        );
+        blockIdx++;
+    }
+
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        /* No conditioning over non-zero length variables here. */
+        buf.Blocks.Data[blockIdx] = QuantizeU64(
+            p.FVars.Data[i], state, buf.Blocks.Data[blockIdx]
+        );
+        blockIdx++;
     }
 
     return buf;
@@ -109,8 +122,11 @@ int32_t CountBlocks(algo_Particles p) {
     if (p.Velocity[0].Len > 0) { n += 3; }
     if (p.ID64.Len > 0) { n++; }
     if (p.ID32.Len > 0) { n++; }
-    for (int32_t i = 0; i < p.Variables.Len; i++) {
-        if (p.Variables.Data[i].Len > 0) { n++; }
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        if (p.FVars.Data[i].Len > 0) { n++; }
+    }
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        if (p.U64Vars.Data[i].Len > 0) { n++; }
     }
 
     return n;
@@ -119,9 +135,9 @@ int32_t CountBlocks(algo_Particles p) {
 /* QuantizeFloat quantizes a float sequence up to the target accuracy. The
  * state and buf parameters are there to prevent unneeded heap allocations. */
 U8Seq QuantizeFloat(
-    FSeq x, algoQ_Info info, algoQ_CompressState state, U8Seq buf
+    FSeq x, algo_Accuracy info, algoQ_CompressState state, U8Seq buf
 ) {
-    U32Seq u32Buf = U32Seq_Extend(state.QuantizedVals, x.Len);
+    U32Seq u32Buf = U32Seq_Extend(state.Quantized, x.Len);
     u32Buf = U32Seq_Sub(u32Buf, 0, x.Len);
     U32Seq_Deref(u32Buf);
 
