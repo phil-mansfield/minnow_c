@@ -15,7 +15,7 @@ typedef struct algo_Particles {
     U64SeqSeq U64Vars;
 } algo_Particles;
 
-algo_Particles algo_EmptyParticles;
+static const algo_Particles algo_EmptyParticles;
 
 typedef struct algo_CompressedParticles {
     U8SeqSeq Blocks;
@@ -23,7 +23,7 @@ typedef struct algo_CompressedParticles {
     bool HasPosition, HasVeclocity, HasID64, HasID32;
 } algo_CompressedParticles;
 
-algo_CompressedParticles EmptyCompressedParticles;
+static const algo_CompressedParticles EmptyCompressedParticles;
 
 typedef struct algo_Accuracy {
     float Accuracy;
