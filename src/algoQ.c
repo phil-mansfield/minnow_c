@@ -32,7 +32,6 @@ algo_CompressedParticles algoQ_Compress(
     int32_t numBlocks = CountBlocks(p);
     buf.Blocks = U8SeqSeq_Extend(buf.Blocks, numBlocks);
     buf.Blocks = U8SeqSeq_Sub(buf.Blocks, 0, numBlocks);
-    U8SeqSeq_Deref(buf.Blocks);
 
     /* Loop through all the fields, and compress them if they exist. */
     int32_t blockIdx = 0;
@@ -139,7 +138,6 @@ U8Seq QuantizeFloat(
 ) {
     U32Seq u32Buf = U32Seq_Extend(state.Quantized, x.Len);
     u32Buf = U32Seq_Sub(u32Buf, 0, x.Len);
-    U32Seq_Deref(u32Buf);
 
     (void) info;
 

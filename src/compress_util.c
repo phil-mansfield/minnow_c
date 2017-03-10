@@ -311,7 +311,6 @@ U8Seq util_EntropyEncode(U8Seq data, U8Seq buf) {
     }
 
     buf = U8Seq_Sub(buf, 0, (int32_t)compressedSize);
-    U8Seq_Deref(buf);
 
     return buf;
 }
@@ -338,21 +337,18 @@ U8Seq util_UndoEntropyEncode(
 U8Seq U8SeqSetLen(U8Seq buf, int32_t len) {
     buf = U8Seq_Extend(buf, len);
     buf = U8Seq_Sub(buf, 0, len);
-    U8Seq_Deref(buf);
     return buf;
 }
 
 U32Seq U32SeqSetLen(U32Seq buf, int32_t len) {
     buf = U32Seq_Extend(buf, len);
     buf = U32Seq_Sub(buf, 0, len);
-    U32Seq_Deref(buf);
     return buf;
 }
 
 FSeq FSeqSetLen(FSeq buf, int32_t len) {
     buf = FSeq_Extend(buf, len);
     buf = FSeq_Sub(buf, 0, len);
-    FSeq_Deref(buf);
     return buf;
 }
 

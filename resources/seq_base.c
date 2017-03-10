@@ -25,11 +25,13 @@ ExSeq ExSeq_New(int32_t len) {
     ExSeq s = { .Data = NULL, .Len = len, .Cap = cap};
     if (!len) { return s; }    
 
-    /* The last four bytes are used to store the reference counter. */
+    /* The last four bytes are used to store the underlying cap size. */
     s.Data = malloc((size_t)cap*sizeof(*s.Data) + 4);
     AssertAlloc(s.Data);
 
     memset(s.Data, 0, (size_t)cap*sizeof(*s.Data) + 4);
+    int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
+    *capPtr = len;
 
     return s;
 }
@@ -61,28 +63,21 @@ ExSeq ExSeq_NewWithCap(int32_t len, int32_t cap) {
     return s;
 }
 
-void ExSeq_Deref(ExSeq s) {
-    int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap);
-    if (!refPtr || !*refPtr) {
-        ExSeq_Free(s);
-        return;
-    }
-    (*refPtr)--;
-}
-
 void ExSeq_Free(ExSeq s) {
-    free(s.Data);
+    int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
+    DebugAssert(*capPtr >= s.Cap) {
+        Panic("*capPtr = %"PRId32", but s.Cap = %"PRId32".", *capPtr, s.Cap);
+    }
+    free(s.Data - (*capPtr - s.Cap));
     s.Data = NULL; /* To make errors easier to find. */
     return;
 }
 
 ExSeq ExSeq_Append(ExSeq s, Example tail) {
     if (s.Len == s.Cap) {
-        /* Brainteaser: why do I do this? */
-        int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap);
-        DebugAssert(!s.Data || *refPtr == 0) {
-            Panic("%"PRId32" living references pointing to s1 in "
-                  "to ExSeq_Join.", *refPtr);
+        int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
+        DebugAssert(*capPtr == s.Cap) {
+            Panic("Appending to a subsequence.%s", "");
         }
 
         s.Cap = (int32_t) (ALPHA * (float) (1 + s.Cap));
@@ -90,8 +85,10 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
 
         s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
         AssertAlloc(s.Data);
-        /* Also resets the reference counter. */
+        
         memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4);
+        capPtr = (int32_t*)(void*)(s.Data + s.Cap);
+        *capPtr = s.Cap;
     }
 
     s.Data[s.Len] = tail;
@@ -102,10 +99,9 @@ ExSeq ExSeq_Append(ExSeq s, Example tail) {
 
 ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
     if (s1.Len + s2.Len  > s1.Cap) {
-        int32_t *refPtr = (int32_t*)(void*)(s1.Data + s1.Cap);
-        DebugAssert(!refPtr || *refPtr == 0) {
-            Panic("%"PRId32" living references pointing to s1 in "
-                  "to ExSeq_Join.", *refPtr);
+        int32_t *capPtr = (int32_t*)(void*)(s1.Data + s1.Cap);
+        DebugAssert(*capPtr == s1.Cap) {
+            Panic("Appending to a subsequence.%s", "");
         }
 
         s1.Cap = (int32_t) (ALPHA * (float) (s1.Len + s2.Len));
@@ -113,8 +109,10 @@ ExSeq ExSeq_Join(ExSeq s1, ExSeq s2) {
 
         s1.Data = realloc(s1.Data, (size_t)s1.Cap*sizeof(*s1.Data) + 4);
         AssertAlloc(s1.Data);
-        /* Also resets the reference counter. */
+
         memset(s1.Data + s1.Len, 0, (size_t)(s1.Cap - s1.Len + 4));
+        capPtr = (int32_t*)(void*)(s1.Data + s1.Cap);
+        *capPtr = s1.Cap;
     }
 
     memcpy(s1.Data + s1.Len, s2.Data, (size_t)s2.Len * sizeof(*s2.Data));
@@ -141,11 +139,6 @@ ExSeq ExSeq_Sub(ExSeq s, int32_t start, int32_t end) {
     sub.Len = end - start;
     sub.Cap = s.Cap - start;
 
-
-    int32_t *refPtr = (int32_t*)(void*)(s.Data + s.Cap);
-    if (!refPtr) { return sub; }
-    (*refPtr)++;
-
     return sub;
 }
 
@@ -162,6 +155,9 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
     s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
     AssertAlloc(s.Data);
     memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4);
+
+    int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap);
+    *capPtr = s.Cap;
 
     return s;
 }

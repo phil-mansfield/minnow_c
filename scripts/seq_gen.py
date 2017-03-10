@@ -61,7 +61,7 @@ def main():
         
 def save_line(line):
     s_line = line.strip()
-    return (len(s_line) > 0 and s_line[0] not in ["/", "#", "*"] and 
+    return (len(s_line) > 0 and s_line[0] not in ["/", "#", "."] and 
             s_line != "typedef double Example;")
     
 def convert_to_macro(line):
