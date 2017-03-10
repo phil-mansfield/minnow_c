@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "seq.h"
 
-/* algo_Snapshot contains information on */
+/* algo_Particles contains information on */
 typedef struct algo_Particles {
     FSeq Position[3];
     FSeq Velocity[3];
@@ -27,7 +27,7 @@ algo_CompressedParticles EmptyCompressedParticles;
 typedef struct algo_Accuracy {
     float Accuracy;
     FSeq Accuracies;
-} algo_Info;
+} algo_Accuracy;
 
 /*********************/
 /* Utility Functions */
