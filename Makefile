@@ -24,7 +24,8 @@ GCC_CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -W
 # 1572 - Floating point equality and inequalities.
 # 2259 - This is a well meaning warning which warns out non-explicit casts,
 #        but it also watns about, e.g., subtracting ints.
-ICC_CFLAGS= -O2 -g -D DEBUG -Werror -std=c99 -pedantic -w3 -wd1419,1572,2259
+# 2415 - Unused static variable declarations.
+ICC_CFLAGS= -O2 -g -D DEBUG -Werror -std=c99 -pedantic -w3 -wd1419,1572,2259,2415
 
 # Select the compiler and compiler flags that you want to use.
 CC=clang
