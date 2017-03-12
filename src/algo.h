@@ -48,7 +48,7 @@ typedef struct algo_Accuracy {
  * be empty. */
 typedef struct algo_Particles {
     FSeq X[3], V[3];
-    algo_Accuracy *XAcc, *VAcc;
+    algo_Accuracy XAcc, VAcc;
     /* XWidth is the width of the simulation box. */
     float XWidth;
 
@@ -62,7 +62,7 @@ typedef struct algo_Particles {
      * particle. FVars.Data[j].Data[i] corresponds to the jth variable of the
      * ith particle. */
     FSeqSeq FVars;
-    algo_Accuracy *FVarAccuracy;
+    algo_Accuracy *FVarsAcc;
     U64SeqSeq U64Vars;
 } algo_Particles;
 
