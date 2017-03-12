@@ -45,14 +45,19 @@ algo_Particles algo_UndoQuantize(
 
 void Particles_Free(algo_Particles p) {
     for (int i = 0; i < 3; i++) {
-        FSeq_Free(p.X[i]);
+	    FSeq_Free(p.X[i]);
         FSeq_Free(p.V[i]);
     }
     U64Seq_Free(p.ID);
-
+	FSeq_Free(p.XAcc.Deltas);
+	FSeq_Free(p.VAcc.Deltas);
+	
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         FSeq_Free(p.FVars.Data[i]);
     }
+	for (int32_t i = 0; i < p.FVars.Len; i++) {
+	    FSeq_Free(p.FVarsAcc[i].Deltas);
+	}
     FSeqSeq_Free(p.FVars);
     free(p.FVarsAcc);
 
