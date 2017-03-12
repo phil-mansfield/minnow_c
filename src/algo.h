@@ -104,7 +104,7 @@ static const algo_QuantizedParticles algo_EmptyQuantizedParticles;
  * fields is stored within the Blocks elements. */
 typedef struct algo_CompressedParticles {
     U8SeqSeq Blocks;
-    int32_t BlockNum, ParticleNum, FVarsLen, U64VarsLen;
+    int32_t ParticleNum, FVarsLen, U64VarsLen;
     bool HasV, HasID;
 } algo_CompressedParticles;
 
@@ -150,12 +150,12 @@ algo_Particles algo_UndoQuantize(
     algo_QuantizedParticles p, algo_Particles buf
 );
 
-/* algo_CheckQuantizedParticles checks that every field in an
+/* QuantizedParticles_Check checks that every field in an
  * algo_QuantizedParticles struct is valid. It Panics otherwise. */
-void algo_CheckQuantizedParticles(algo_QuantizedParticles p);
+void QuantizedParticles_Check(algo_QuantizedParticles p);
 
-/* algo_CheckParticles checks that every field in an algo_Particles struct is
+/* Particles_check checks that every field in an algo_Particles struct is
  * valid. It Panics otherwise. */
-void algo_CheckParticles(algo_Particles p);
+void Particles_Check(algo_Particles p);
 
 #endif /* ALGO_H_ */

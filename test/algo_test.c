@@ -67,18 +67,29 @@ bool testCheckParticles() {
             p.X[j] = FSeq_New(tests[i].pos);
             p.V[j] = FSeq_New(tests[i].vel);
         }
+        p.XWidth = 75;
+        p.XAcc.Delta = 0;
+        p.XAcc.Deltas = FSeq_New(tests[i].pos);
+        p.VAcc.Delta = tests[i].vel;
+        p.VAcc.Deltas = FSeq_Empty();
+
         p.ID = U64Seq_New(tests[i].ID);
+        p.IDWidth = 10;
 
         p.FVars = FSeqSeq_New(tests[i].fVarLen);
+        p.FVarsAcc = calloc((size_t) tests[i].fVarLen, sizeof(*p.FVarsAcc));
         for (int32_t j = 0; j < tests[i].fVarLen; j++) {
             p.FVars.Data[j] = FSeq_New(tests[i].fVar[j]);
+            p.FVarsAcc[j].Delta = tests[i].fVar[j];
         }
+
         p.U64Vars = U64SeqSeq_New(tests[i].u64VarLen);
         for (int32_t j = 0; j < tests[i].u64VarLen; j++) {
             p.U64Vars.Data[j] = U64Seq_New(tests[i].u64Var[j]);
         }
 
-        algo_CheckParticles(p);
+        Particles_Check(p);
+        Particles_Free(p);
     }
 
     return true;

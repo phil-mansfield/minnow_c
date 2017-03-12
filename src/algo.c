@@ -29,18 +29,6 @@ algo_QuantizedParticles QuantizedParticles_Match(
 /* Exported Functions */
 /**********************/
 
-void Particles_Free(algo_Particles p) {
-    (void) p;
-}
-
-void QuantizedParticles_Free(algo_QuantizedParticles p) {
-    (void) p;
-}
-
-void CompressedParticles_Free(algo_CompressedParticles p) {
-    (void) p;
-}
-
 algo_QuantizedParticles algo_Quantize(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
@@ -55,7 +43,53 @@ algo_Particles algo_UndoQuantize(
     return buf;
 }
 
-void algo_CheckQuantizedParticles(algo_QuantizedParticles p) {
+void Particles_Free(algo_Particles p) {
+    free(p.FVarsAcc);
+    for (int i = 0; i < 3; i++) {
+        FSeq_Free(p.X[i]);
+        FSeq_Free(p.V[i]);
+    }
+    U64Seq_Free(p.ID);
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        FSeq_Free(p.FVars.Data[i]);
+    }
+    FSeqSeq_Free(p.FVars);
+    free(p.FVarsAcc);
+
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        U64Seq_Free(p.U64Vars.Data[i]);
+    }
+    U64SeqSeq_Free(p.U64Vars);
+}
+
+void QuantizedParticles_Free(algo_QuantizedParticles p) {
+    for (int i = 0; i < 3; i++) {
+        U32Seq_Free(p.X[i]);
+        U32Seq_Free(p.V[i]);
+        U32Seq_Free(p.ID[i]);
+    }
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        U32Seq_Free(p.FVars.Data[i]);
+    }
+    U32SeqSeq_Free(p.FVars);
+    free(p.FVarsRange);
+
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        U64Seq_Free(p.U64Vars.Data[i]);
+    }
+    U64SeqSeq_Free(p.U64Vars);
+}
+
+void CompressedParticles_Free(algo_CompressedParticles p) {
+    for (int32_t i = 0; i < p.Blocks.Len; i++) {
+        U8Seq_Free(p.Blocks.Data[i]);
+    }
+    U8SeqSeq_Free(p.Blocks);
+}
+
+void QuantizedParticles_Check(algo_QuantizedParticles p) {
     int32_t len = p.X[0].Len;
     if (len <= 0) {
         Panic("X sequences have been left empty.%s", "");
@@ -125,7 +159,7 @@ void algo_CheckQuantizedParticles(algo_QuantizedParticles p) {
     }
 }
 
-void algo_CheckParticles(algo_Particles p) {
+void Particles_Check(algo_Particles p) {
     int32_t len = p.X[0].Len;
     if (len <= 0) {
         Panic("X sequences have been left empty.%s", "");
@@ -193,7 +227,7 @@ void FCheckValues(FSeq x, algo_Accuracy acc, float bound, char *seqName) {
     if (x.Len == 0) { return; }
 
     if (acc.Delta <= 0 && x.Len != acc.Deltas.Len) {
-        Panic("Length of %s is %"PRId32", but length of the corresponding"
+        Panic("Length of %s is %"PRId32", but length of the corresponding "
               "Deltas sequences is %"PRId32".", seqName, x.Len, acc.Deltas.Len);
     }
 
