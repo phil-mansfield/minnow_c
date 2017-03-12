@@ -17,6 +17,24 @@ FSeq FSeqSetLen(FSeq buf, int32_t len);
 /* Exported Functions */
 /**********************/
 
+void util_FRange(FSeq x, float *minPtr, float *maxPtr) {
+    DebugAssert(x.Len > 0) {
+        Panic("Zero length sequence given to FRange.%s", "");
+    }
+
+    float min = x.Data[0];
+    float max = x.Data[0];
+    for (int32_t i = 0; i < x.Len; i++) {
+        if (x.Data[i] > max) {
+            max = x.Data[i];
+        } else if (x.Data[i] < min) {
+            min = x.Data[i];
+        }
+    }
+    *minPtr = min;
+    *maxPtr = max;
+}
+
 U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
     DebugAssert(x.Len == level.Len) {
         Panic("BinIndex given x with length %"PRId32", but level with length %"

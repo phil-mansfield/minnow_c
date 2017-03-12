@@ -10,6 +10,8 @@
 #include "seq.h"
 #include "rand.h"
 
+void util_FRange(FSeq x, float *minPtr, float *maxPtr);
+
 /* util_BinIndex returns the bin indices of a sequence of floats, x, 
  * within the range [x0, x0 + dx) with bin width dx/(2^level[i]). A buffer
  * sequence may be passed to this function to prevent unneeded heap
