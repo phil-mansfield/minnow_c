@@ -73,9 +73,12 @@ void QuantizedParticles_Free(algo_QuantizedParticles p) {
         U32Seq_Free(p.V[i]);
         U32Seq_Free(p.ID[i]);
     }
+    U8Seq_Free(p.XRange.Depths);
+    U8Seq_Free(p.VRange.Depths);
 
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         U32Seq_Free(p.FVars.Data[i]);
+        U8Seq_Free(p.FVarsRange[i].Depths);
     }
     U32SeqSeq_Free(p.FVars);
     free(p.FVarsRange);
