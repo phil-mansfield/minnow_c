@@ -44,7 +44,6 @@ algo_Particles algo_UndoQuantize(
 }
 
 void Particles_Free(algo_Particles p) {
-    free(p.FVarsAcc);
     for (int i = 0; i < 3; i++) {
         FSeq_Free(p.X[i]);
         FSeq_Free(p.V[i]);
