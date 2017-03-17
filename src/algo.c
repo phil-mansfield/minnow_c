@@ -66,6 +66,10 @@ algo_QuantizedParticles algo_Quantize(
 
     /* Copy (not reference) uint64 variables into QuantizedParticles. */
 
+	/* Placeholder: */
+	buf.FVars = U32SeqSeq_Extend(buf.FVars, p.FVars.Len);
+	buf.FVars = U32SeqSeq_Sub(buf.FVars, 0, p.FVars.Len);
+	
     return buf;
 }
 
@@ -87,8 +91,6 @@ void Particles_Free(algo_Particles p) {
 	
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         FSeq_Free(p.FVars.Data[i]);
-    }
-	for (int32_t i = 0; i < p.FVars.Len; i++) {
 	    FSeq_Free(p.FVarsAcc[i].Deltas);
 	}
     FSeqSeq_Free(p.FVars);
@@ -114,7 +116,7 @@ void QuantizedParticles_Free(algo_QuantizedParticles p) {
         U8Seq_Free(p.FVarsRange[i].Depths);
     }
     U32SeqSeq_Free(p.FVars);
-    free(p.FVarsRange);
+	free(p.FVarsRange);
 
     for (int32_t i = 0; i < p.U64Vars.Len; i++) {
         U64Seq_Free(p.U64Vars.Data[i]);

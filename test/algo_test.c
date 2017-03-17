@@ -159,7 +159,6 @@ bool testFVarRange() {
 
 		Particles_Free(p);
     }
-	QuantizedParticles_Free(q);
 
     /* Non-uniform delta tests. */
 
@@ -169,21 +168,17 @@ bool testFVarRange() {
         float x0, x1;
         uint8_t depths[8];
     } testsNU[] = {
-        /* Redo uniform tests to make sure nothig has been broken. */
+        /* Redo uniform tests to make sure nothing has been broken. */
         {{2}, {3}, 1, 3, 5, {0}},
         {{2, 2}, {3, 4}, 2, 3, 5, {0, 0}},
         {{2, 2}, {3, 5}, 2, 3, 7, {1, 1}},
         {{0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
          {1, 2, 3, 4, 5, 6, 8}, 7, 1, 9,
          {4, 4, 4, 4, 4, 4, 4}},
-
         {{2, 1}, {3, 4.75}, 2, 3, 5, {0, 1}},
         {{2, 1.5}, {3, 4.75}, 2, 3, 5, {0, 1}},
         {{2, 1.5}, {3, 5.75}, 2, 3, 6, {1, 1}}
     };
-
-
-	memset(&q, 0, sizeof(q));
 
     for (int i = 0; i < LEN(testsNU); i++) {
 
