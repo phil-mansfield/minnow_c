@@ -236,6 +236,69 @@ bool testFVarRange() {
 
 bool testVRange() {
     bool res = true;
+
+    struct {
+        float delta, v[8][3];
+        int32_t len;
+        float x0[3], x1[3];
+        uint8_t depth;
+    } tests[] = {
+        {2, {{3}, {3}, {3}}, 1, {3, 3, 3}, {5, 5, 5}, 0},
+        {2, {{3, 4}, {3, 4}, {3, 4}}, 2, {3, 3, 3}, {5, 5, 5}, 0},
+        {2, {{3, 5}, {3, 5}, {3, 5}}, 2, {3, 3, 3}, {7, 7, 7}, 1},
+    };
+
+	algo_QuantizedParticles q;
+	memset(&q, 0, sizeof(q));
+
+    for (int i = 0; i < LEN(tests); i++) {
+
+        algo_Particles p;
+        memset(&p, 0, sizeof(p));
+
+        for (int j = 0; j < 3; j++) {
+            p.X[j] = FSeq_New(tests[i].len);
+            p.V[j] = FSeq_FromArray(tests[i].v[j], tests[i].len);
+        }
+        p.XWidth = 10;
+        p.XAcc.Delta = 1;
+        p.VAcc.Delta = tests[i].delta;
+
+        q = algo_Quantize(p, q);
+        algo_QuantizedVectorRange range = q.VRange;
+
+        if (range.Depth != tests[i].depth) {
+            fprintf(stderr, "In test %d of testFVarRange, expected Depth = %"
+                    PRIu8", but got %"PRIu8".\n",
+                    i, tests[i].depth, range.Depth);
+            res = false;
+        }
+
+        if (!almostEqual(range.X0[0], tests[i].x0[0], (float)1e-4) ||
+            !almostEqual(range.X0[1], tests[i].x0[1], (float)1e-4) ||
+            !almostEqual(range.X0[2], tests[i].x0[2], (float)1e-4)) {
+            fprintf(stderr, "In test %d of testFVarRange, expected X0 = "
+                    "(%g, %g %g), but got (%g, %g %g).\n",
+                    i, tests[i].x0[0], tests[i].x0[1], tests[i].x0[2],
+                    range.X0[0], range.X0[1], range.X0[2]);
+            res = false;
+        }
+
+        if (!almostEqual(range.X1[0], tests[i].x1[0], (float)1e-4) ||
+            !almostEqual(range.X1[1], tests[i].x1[1], (float)1e-4) ||
+            !almostEqual(range.X1[2], tests[i].x1[2], (float)1e-4)) {
+            fprintf(stderr, "In test %d of testFVarRange, expected X1 = "
+                    "(%g, %g %g), but got (%g, %g, %g).\n",
+                    i, tests[i].x1[0], tests[i].x1[1], tests[i].x1[2],
+                    range.X1[0], range.X1[1], range.X1[2]);
+            res = false;
+        }
+
+		Particles_Free(p);
+    }
+
+    QuantizedParticles_Free(q);
+
     return res;
 }
 

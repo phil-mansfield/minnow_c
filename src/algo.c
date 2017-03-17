@@ -440,7 +440,7 @@ algo_QuantizedParticles SetQuantizedRanges(
             FMinMax(p.V[i], &vMin[i], &vMax[i]);
         }
         buf.VRange = AccuracyToVectorRange(
-            p.XAcc, vMin, vMax, buf.VRange
+            p.VAcc, vMin, vMax, buf.VRange
         );
     }
 
