@@ -275,7 +275,7 @@ void FCheckValues(FSeq x, algo_Accuracy acc, float bound, char *seqName) {
 
     if (bound > 0) {
         for (int32_t i = 0; i < x.Len; i++) {
-            if (x.Data[i] > bound || x.Data[i] < 0) {
+            if (x.Data[i] >= bound || x.Data[i] < 0) {
                 Panic("Value %"PRId32" in %s is %g, which is outside "
                       "its range of [0, %g).", i, seqName, x.Data[i], bound);
             } else if (x.Data[i] != x.Data[i]) {
@@ -623,7 +623,9 @@ algo_QuantizedVectorRange AccuracyToVectorRange(
  * particles to the lowest amount of precision that is still consistent with an
  * input algo_Accuracy. It is identical to AccuracyToVectorRange, except it
  * forces grid cells to be aligned to some global grid with a physical width of
- * xWidth. */
+ * xWidth.
+ *
+ * This requirement adds significant complexity. */
 algo_QuantizedVectorRange AccuracyToXVectorRange(
     algo_Accuracy acc, float x0[3], float x1[3],
     float xWidth, algo_QuantizedVectorRange buf
@@ -634,8 +636,9 @@ algo_QuantizedVectorRange AccuracyToXVectorRange(
 
     uint8_t fullDepth;
     for (fullDepth = 0; fullDepth <= 24; fullDepth++) {
-        if (acc.Delta * (float) (1 << fullDepth) > xWidth) { break; }
+        if (acc.Delta * (float) (1 << fullDepth) >= xWidth) { break; }
     }
+
     if (fullDepth > 24) {
         Panic("An accuracy of %g was requested for variables with a range "
               "of [(%g, %g, %g), (%g, %g, %g)], but this exceeds the "
@@ -644,10 +647,25 @@ algo_QuantizedVectorRange AccuracyToXVectorRange(
               x1[0], x1[1], x1[2]);
     }
 
+    /* Align range edges with global grid. */
+    float trueDelta = xWidth / (float) (1 << fullDepth);
+
+    float maxDiff = 0;
     for (int i = 0; i < 3; i++) {
-        x0[i] = acc.Delta * floorf(x0[i] / acc.Delta);
-        x1[i] = acc.Delta * ceilf(x1[i] / acc.Delta);
+        buf.X0[i] = trueDelta * floorf(x0[i] / trueDelta);
+        float xx1 = trueDelta * ceilf(x1[i] / trueDelta);
+        if (maxDiff < xx1 - buf.X0[i]) { maxDiff = xx1 - buf.X0[i]; }
     }
 
-    return AccuracyToVectorRange(acc, x0, x1, buf);
+    uint8_t segmentDelta;
+    for (segmentDelta = 0; segmentDelta <= 24; segmentDelta++) {
+        if (trueDelta * (float) (1 << segmentDelta) >= maxDiff) { break; }
+    }
+
+    buf.Depth = segmentDelta;
+    for (int i = 0; i < 3; i++) {
+        buf.X1[i] = buf.X0[i] + trueDelta  * (float) (1 << buf.Depth);
+    }
+
+    return buf;
 }

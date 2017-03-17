@@ -336,6 +336,14 @@ bool testVRange() {
         q = algo_Quantize(p, q);
         algo_QuantizedVectorRange range = q.VRange;
 
+        for (int32_t j = 0; j < range.Depths.Len; j++) {
+            if (range.Depths.Data[j] != testsNU[i].depths[j]) {
+                fprintf(stderr, "In test %d of part 2 of testVRange, expected"
+                        "Depths[%"PRId32"] = %"PRIu8", but got %"PRIu8".\n",
+                        i, j, testsNU[i].depths[j], range.Depths.Data[j]);
+            }
+        }
+
         if (!almostEqual(range.X0[0], testsNU[i].x0[0], (float)1e-4) ||
             !almostEqual(range.X0[1], testsNU[i].x0[1], (float)1e-4) ||
             !almostEqual(range.X0[2], testsNU[i].x0[2], (float)1e-4)) {
@@ -365,6 +373,67 @@ bool testVRange() {
 
 bool testXRange() {
     bool res = true;
+    
+    struct {
+        float delta, x[8][3];
+        int32_t len;
+        float width, x0[3], x1[3];
+        uint8_t depth;
+    } tests[] = {
+        {2, {{3}, {3}, {3}}, 1, 16, {2, 2, 2}, {4, 4, 4}, 0},
+        {2, {{3, 5}, {3, 5}, {3, 5}}, 2, 16, {2, 2, 2}, {6, 6, 6}, 1},
+        {2, {{3, 4}, {3, 4}, {3, 4}}, 2, 16, {2, 2, 2}, {4, 4, 4}, 0},
+        {2, {{3, 5}, {3, 3.5}, {3, 3.5}}, 2, 16, {2, 2, 2}, {6, 6, 6}, 1},
+        {2, {{3, 3.5}, {4, 4.5}, {3, 3.5}}, 2, 16, {2, 4, 2}, {4, 6, 4}, 0},
+    };
+
+	algo_QuantizedParticles q;
+	memset(&q, 0, sizeof(q));
+
+    for (int i = 0; i < LEN(tests); i++) {
+
+        algo_Particles p;
+        memset(&p, 0, sizeof(p));
+
+        for (int j = 0; j < 3; j++) {
+            p.X[j] = FSeq_FromArray(tests[i].x[j], tests[i].len);
+        }
+        p.XWidth = tests[i].width;
+        p.XAcc.Delta = tests[i].delta;
+
+        q = algo_Quantize(p, q);
+        algo_QuantizedVectorRange range = q.XRange;
+
+        if (range.Depth != tests[i].depth) {
+            fprintf(stderr, "In test %d of part 1 of testXRange, expected "
+                    "Depth = %"PRIu8", but got %"PRIu8".\n",
+                    i, tests[i].depth, range.Depth);
+            res = false;
+        }
+
+        if (!almostEqual(range.X0[0], tests[i].x0[0], (float)1e-4) ||
+            !almostEqual(range.X0[1], tests[i].x0[1], (float)1e-4) ||
+            !almostEqual(range.X0[2], tests[i].x0[2], (float)1e-4)) {
+            fprintf(stderr, "In test %d of part 1 of testXRange, expected "
+                    "X0 = (%g, %g %g), but got (%g, %g %g).\n",
+                    i, tests[i].x0[0], tests[i].x0[1], tests[i].x0[2],
+                    range.X0[0], range.X0[1], range.X0[2]);
+            res = false;
+        }
+
+        if (!almostEqual(range.X1[0], tests[i].x1[0], (float)1e-4) ||
+            !almostEqual(range.X1[1], tests[i].x1[1], (float)1e-4) ||
+            !almostEqual(range.X1[2], tests[i].x1[2], (float)1e-4)) {
+            fprintf(stderr, "In test %d of part 1 of testXRange, expected "
+                    "X1 = (%g, %g %g), but got (%g, %g, %g).\n",
+                    i, tests[i].x1[0], tests[i].x1[1], tests[i].x1[2],
+                    range.X1[0], range.X1[1], range.X1[2]);
+            res = false;
+        }
+
+		Particles_Free(p);
+    }
+
     return res;
 }
 
