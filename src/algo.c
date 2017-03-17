@@ -445,7 +445,9 @@ algo_QuantizedParticles SetQuantizedRanges(
     buf.FVarsRange = realloc(
         buf.FVarsRange, sizeof(*buf.FVarsRange) * (size_t)p.FVars.Len
     );
-
+	memset(buf.FVarsRange + buf.FVars.Len, 0,
+		   sizeof(*buf.FVarsRange) * (size_t)(p.FVars.Len - buf.FVars.Len));
+	
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         if (p.FVars.Data[i].Len == 0) { continue; }
         float min, max;
