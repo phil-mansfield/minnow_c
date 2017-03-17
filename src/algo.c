@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "debug.h"
 #include <float.h>
-#include <strings.h>
+#include <string.h>
 #include "math.h"
 
     
