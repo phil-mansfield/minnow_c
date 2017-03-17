@@ -76,14 +76,31 @@ typedef struct algo_QuantizedRange {
     /* A non-empty Depths indicates the non-uniform accuracies have been
      * specified and that the value of Depth should be ignored. */
     U8Seq Depths;
+    float X0, X1;
+    bool Log;
 } algo_QuantizedRange;
+
+static const algo_QuantizedRange algo_EmptyQuantizedRange;
+
+/* algo_QuantizedVectorRange specifies the range of values that a quantized
+ * vector can take on. These ranges must always be powers of two and are
+ * represented by "depths," which are the base two exponents. */
+typedef struct algo_QuantizedVectorRange {
+    uint8_t Depth;
+    /* A non-empty Depths indicates the non-uniform accuracies have been
+     * specified and that the value of Depth should be ignored. */
+    U8Seq Depths;
+    float X0[3], X1[3];
+} algo_QuantizedVectorRange;
+
+static const algo_QuantizedVectorRange algo_EmptyQuantizedVectorRange;
 
 /* algo_QuantizedParticles represents the same information as algo_Particles,
  * but quantized to a grid. It also contains information on the quantization
  * depths and ranges. */
 typedef struct algo_QuantizedParticles {
     U32Seq X[3], V[3];
-    algo_QuantizedRange XRange, VRange;
+    algo_QuantizedVectorRange XRange, VRange;
 
     /* Here, ID is represented as a 3-vector, which is generally what IDs
      * correspond to in cosmological simulations. If this isn't true, the IDs
@@ -110,6 +127,26 @@ typedef struct algo_CompressedParticles {
 
 static const algo_CompressedParticles algo_EmptyCompressedParticles;
 
+/****************/
+/* Quantization */
+/****************/
+
+/* algo_Quantize quantizes an block of particles. An optional buffer can be
+ * passed to this function, although it cannot be assumed to point to valid
+ * memory after this function returns. buf must be zeroed or must be previous
+ * return value of algo_Quantize. */
+algo_QuantizedParticles algo_Quantize(
+    algo_Particles p, algo_QuantizedParticles buf
+);
+
+/* algo_Quantize reverses quantization of a block of particles. An optional
+ * buffer can be passed to this function, although it cannot be assumed to
+ * point to valid memory after this function returns. buf must be zeroed or
+ * must be previous return value of algo_UndoQuantize. */
+algo_Particles algo_UndoQuantize(
+    algo_QuantizedParticles p, algo_Particles buf
+);
+
 /********************/
 /* Struct Functions */
 /********************/
@@ -118,15 +155,9 @@ static const algo_CompressedParticles algo_EmptyCompressedParticles;
  * includes arrays referenced to by seqeunces within p. */
 void Particles_Free(algo_Particles p);
 
-algo_Particles Particles_Match(algo_QuantizedParticles ref, algo_Particles buf);
-
 /* QuantizedParticles_Free frees all heap-allocated memory associated with p.
  * This includes arrays referenced to by seqeunces within p. */
 void QuantizedParticles_Free(algo_QuantizedParticles p);
-
-algo_QuantizedParticles QuantizedParticles_Match(
-    algo_Particles ref, algo_QuantizedParticles buf
-);
 
 /* CompressedParticles_Free frees all heap-allocated memory associated with p.
  * This includes arrays referenced to by seqeunces within p. */
@@ -135,20 +166,6 @@ void CompressedParticles_Free(algo_CompressedParticles p);
 /*********************/
 /* Utility Functions */
 /*********************/
-
-/* algo_Quantize quantizes an block of particles. An optional buffer can be
- * passed to this function, although it cannot be assumed to point to valid
- * memory after this function returns. */
-algo_QuantizedParticles algo_Quantize(
-    algo_Particles p, algo_QuantizedParticles buf
-);
-
-/* algo_Quantize reverses quantization of a block of particles. An optional
- * buffer can be passed to this function, although it cannot be assumed to
- * point to valid memory after this function returns. */
-algo_Particles algo_UndoQuantize(
-    algo_QuantizedParticles p, algo_Particles buf
-);
 
 /* QuantizedParticles_Check checks that every field in an
  * algo_QuantizedParticles struct is valid. It Panics otherwise. */

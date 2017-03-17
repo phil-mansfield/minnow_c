@@ -4,25 +4,51 @@
 #include <stdio.h>
 #include "debug.h"
 #include <float.h>
+#include <strings.h>
+#include "math.h"
 
+    
 /************************/
 /* Forward Declarations */
 /************************/
 
+/* Functions that check for invalid values. */
 void FCheckValues(FSeq x, algo_Accuracy acc, float bound, char *seqName);
-
 void U64CheckValues(U64Seq x, uint64_t bound, char *seqName);
-
 void U32CheckValues(
     U32Seq x, uint32_t bound, algo_QuantizedRange range, char *seqName
 );
-
-algo_Particles Particles_Match(
-    algo_QuantizedParticles ref, algo_Particles buf
+void U32CheckVectorValues(
+    U32Seq x, uint32_t bound, algo_QuantizedVectorRange range, char *seqName
 );
 
-algo_QuantizedParticles QuantizedParticles_Match(
-    algo_Particles ref, algo_QuantizedParticles buf
+/* Functions that wrap around low level sequence functions to (prevent bugs). */
+U8Seq U8SetLen(U8Seq s, int32_t len);
+U32Seq U32SetLen(U32Seq s, int32_t len);
+U64Seq U64SetLen(U64Seq s, int32_t len);
+FSeq FSetLen(FSeq s, int32_t len);
+
+/* Functions that convert algo_Accuracy structs to algo_*Range structs. */
+algo_QuantizedRange AccuracyToRange(
+    algo_Accuracy acc, float x0, float x1, algo_QuantizedRange buf
+);
+
+algo_QuantizedVectorRange AccuracyToVectorRange(
+    algo_Accuracy acc, float x0[3], float x1[3], algo_QuantizedVectorRange buf
+);
+
+algo_QuantizedVectorRange AccuracyToXVectorRange(
+    algo_Accuracy acc, float x0[3], float x1[3],
+    float xWdith, algo_QuantizedVectorRange buf
+);
+
+/* Range calculation */
+void FMinMax(FSeq x, float *minOut, float *maxOut);
+void FBoundedMinMax(FSeq x, float dx, float *minOut, float *maxOut);
+
+/* algo_Quantize subprocedures */
+algo_QuantizedParticles SetQuantizedRanges(
+    algo_Particles p, algo_QuantizedParticles buf
 );
 
 /**********************/
@@ -32,7 +58,14 @@ algo_QuantizedParticles QuantizedParticles_Match(
 algo_QuantizedParticles algo_Quantize(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
-    (void) p;
+    buf = SetQuantizedRanges(p, buf);
+
+    /* Quantize floating point variables. */
+
+    /* Convert IDs into ID vectors. */
+
+    /* Copy (not reference) uint64 variables into QuantizedParticles. */
+
     return buf;
 }
 
@@ -108,9 +141,9 @@ void QuantizedParticles_Check(algo_QuantizedParticles p) {
               "same length.", p.X[0].Len, p.X[1].Len,
               p.X[2].Len);
     }
-    U32CheckValues(p.X[0], 0, p.XRange, "p.X[0]");
-    U32CheckValues(p.X[1], 0, p.XRange, "p.X[1]");
-    U32CheckValues(p.X[2], 0, p.XRange, "p.X[2]");
+    U32CheckVectorValues(p.X[0], 0, p.XRange, "p.X[0]");
+    U32CheckVectorValues(p.X[1], 0, p.XRange, "p.X[1]");
+    U32CheckVectorValues(p.X[2], 0, p.XRange, "p.X[2]");
 
     if (p.V[0].Len != p.V[1].Len ||  p.V[0].Len != p.V[2].Len) {
         Panic("The lengths of the three velocity sequences are (%"PRId32
@@ -118,9 +151,9 @@ void QuantizedParticles_Check(algo_QuantizedParticles p) {
               "same length.", p.V[0].Len, p.V[1].Len,
               p.V[2].Len);
     }
-    U32CheckValues(p.V[0], 0, p.VRange, "p.V[0]");
-    U32CheckValues(p.V[1], 0, p.VRange, "p.V[1]");
-    U32CheckValues(p.V[2], 0, p.VRange, "p.V[2]");
+    U32CheckVectorValues(p.V[0], 0, p.VRange, "p.V[0]");
+    U32CheckVectorValues(p.V[1], 0, p.VRange, "p.V[1]");
+    U32CheckVectorValues(p.V[2], 0, p.VRange, "p.V[2]");
 
     if (p.ID[0].Len != p.ID[1].Len ||  p.ID[0].Len != p.ID[2].Len) {
         Panic("The lengths of the three ID sequences are (%"PRId32
@@ -128,7 +161,7 @@ void QuantizedParticles_Check(algo_QuantizedParticles p) {
               "same length.", p.ID[0].Len, p.ID[1].Len,
               p.ID[2].Len);
     }
-    algo_QuantizedRange empty = {0, U8Seq_Empty()};
+    algo_QuantizedRange empty = {0, U8Seq_Empty(), 0, 0, false};
     U32CheckValues(p.ID[0], p.IDWidth, empty, "p.ID[0]");
     U32CheckValues(p.ID[1], p.IDWidth, empty, "p.ID[1]");
     U32CheckValues(p.ID[2], p.IDWidth, empty, "p.ID[2]");
@@ -240,8 +273,8 @@ void FCheckValues(FSeq x, algo_Accuracy acc, float bound, char *seqName) {
 
     if (bound > 0) {
         for (int32_t i = 0; i < x.Len; i++) {
-            if (x.Data[i] > 2*bound || x.Data[i] < -bound) {
-                Panic("Value %"PRId32" in %s is %g, which is very far outside "
+            if (x.Data[i] > bound || x.Data[i] < 0) {
+                Panic("Value %"PRId32" in %s is %g, which is outside "
                       "its range of [0, %g).", i, seqName, x.Data[i], bound);
             } else if (x.Data[i] != x.Data[i]) {
                 Panic("Value %"PRId32" in %s is NaN.", i, seqName);
@@ -302,16 +335,256 @@ void U32CheckValues(
     }
 }
 
-algo_Particles Particles_Match(
-    algo_QuantizedParticles ref, algo_Particles buf
+void U32CheckVectorValues(
+    U32Seq x, uint32_t bound, algo_QuantizedVectorRange range, char *seqName
 ) {
-    (void) ref;
+    if (x.Len == 0) { return; }
+
+    if (range.Depths.Len != 0) {
+        if (range.Depths.Len != x.Len) {
+            Panic("Length of %s is %"PRId32", but length of corresponding "
+                  "Depths sequence is %"PRId32".", seqName, x.Len,
+                  range.Depths.Len);
+        }
+
+        for (int32_t i = 0; i < x.Len; i++) {
+            bound = 1 << range.Depths.Data[i];
+            if (x.Data[i] >= bound) {
+                Panic("Value %"PRId32" in %s is %"PRIu32", which is outside"
+                      " its range [0, %"PRIu32").", i, seqName, x.Data[i],
+                      bound);
+            }
+        }
+    } else {
+        if (bound == 0) { bound = 1<<range.Depth; }
+        for (int32_t i = 0; i < x.Len; i++) {
+            if (x.Data[i] >= bound) {
+                Panic("Value %"PRId32" in %s is %"PRIu32", which is outside"
+                      " its range [0, %"PRIu32").", i, seqName, x.Data[i],
+                      bound);
+            }   
+        }
+    }
+}
+
+U8Seq U8SetLen(U8Seq s, int32_t len) {
+    s = U8Seq_Extend(s, len);
+    s = U8Seq_Sub(s, 0, len);
+    memset(s.Data, 0, (size_t)s.Len * sizeof(*s.Data));
+    return s;
+}
+
+U32Seq U32SetLen(U32Seq s, int32_t len) {
+    s = U32Seq_Extend(s, len);
+    s = U32Seq_Sub(s, 0, len);
+    memset(s.Data, 0, (size_t)s.Len * sizeof(*s.Data));
+    return s;
+}
+
+U64Seq U64SetLen(U64Seq s, int32_t len) {
+    s = U64Seq_Extend(s, len);
+    s = U64Seq_Sub(s, 0, len);
+    memset(s.Data, 0, (size_t)s.Len * sizeof(*s.Data));
+    return s;
+}
+
+FSeq FSetLen(FSeq s, int32_t len) {
+    s = FSeq_Extend(s, len);
+    s = FSeq_Sub(s, 0, len);
+    memset(s.Data, 0, (size_t)s.Len * sizeof(*s.Data));
+    return s;
+}
+
+/* MinMax calculates the minimum and maximum values of a sequence  */
+void FMinMax(FSeq x, float *minOut, float *maxOut) {
+    DebugAssert(x.Len > 0) {
+        Panic("Cannot find maximum of an empty sequence.%s", "");
+    }
+
+    float min = x.Data[0];
+    float max = x.Data[0];
+    for (int32_t i = 0; i < x.Len; i++) {
+        if (x.Data[i] > max) {
+            max = x.Data[i];
+        } else if (x.Data[i] < min) {
+            min = x.Data[i];
+        }
+    }
+
+    *minOut = min;
+    *maxOut = max;
+}
+
+void FBoundedMinMax(FSeq x, float dx, float *minOut, float *maxOut) {
+    (void) dx;
+    FMinMax(x, minOut, maxOut);
+}
+
+/* SetQuantizedRanges sets all the *Range fields to the correct values. */
+algo_QuantizedParticles SetQuantizedRanges(
+    algo_Particles p, algo_QuantizedParticles buf
+) {
+    float xMin[3], xMax[3];
+    for (int i = 0; i < 3; i++) {
+        FBoundedMinMax(p.X[i], p.XWidth, &xMin[i], &xMax[i]);
+    }
+    buf.XRange = AccuracyToXVectorRange(
+        p.XAcc, xMin, xMax, p.XWidth, buf.XRange
+    );
+
+    if (p.V[0].Len > 0) {
+        float vMin[3], vMax[3];
+        for (int i = 0; i < 3; i++) {
+            FMinMax(p.V[i], &vMin[i], &vMax[i]);
+        }
+        buf.VRange = AccuracyToVectorRange(
+            p.XAcc, vMin, vMax, buf.VRange
+        );
+    }
+
+    buf.FVarsRange = realloc(
+        buf.FVarsRange, sizeof(*buf.FVarsRange) * (size_t)p.FVars.Len
+    );
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        if (p.FVars.Data[i].Len == 0) { continue; }
+        float min, max;
+        FMinMax(p.FVars.Data[i], &min, &max);
+        buf.FVarsRange[i] = AccuracyToRange(
+            p.FVarsAcc[i], min, max, buf.FVarsRange[i]
+        );
+    }
+
     return buf;
 }
 
-algo_QuantizedParticles QuantizedParticles_Match(
-    algo_Particles ref, algo_QuantizedParticles buf
+/* AccuracyToRange returns the algo_QuantizedRange which specifies
+ * particles to the lowest amount of precision that is still consistent with an
+ * input algo_Accuracy. */
+algo_QuantizedRange AccuracyToRange(
+    algo_Accuracy acc, float x0, float x1, algo_QuantizedRange buf
 ) {
-    (void) ref;
+    if (acc.Deltas.Len == 0) {
+        uint8_t depth;
+        for (depth = 0; depth <= 24; depth++) {
+            if (acc.Delta * (float) (1 << depth) > x1 - x0) { break; }
+        }
+
+        DebugAssert(depth <= 24) {
+            Panic("An accuracy of %g was requested for variables with a range "
+                  "of [%g, %g], but this exceeds the granularity of single "
+                  "precision floats, which only support 24 bits of mantissa "
+                  "precision.", acc.Delta, x0, x1);
+        }
+        
+        buf.X0 = x0;
+        buf.X1 = x0 + acc.Delta * (float) (1 << depth);
+        buf.Depth = depth;
+        buf.Depths = U8Seq_Sub(buf.Depths, 0, 0);
+    } else {
+        /* This can be optimized with a binary search if need be. */
+
+        buf.Depths = U8SetLen(buf.Depths, acc.Deltas.Len);
+
+        float prevDelta = -1;
+        uint8_t prevDepth = (uint8_t)256;
+        float maxWidth = x1 - x0;
+
+        for (int32_t i = 0; i < acc.Deltas.Len; i++) {
+            float delta = acc.Deltas.Data[i];
+            if (prevDelta == delta) {
+                buf.Depths.Data[i] = prevDepth;
+            } else {
+
+                uint8_t depth;
+                for (depth = 0; depth <= 24; depth++) {
+                    float width = acc.Delta * (float) (1 << depth);
+                    if (width > x1 - x0) {
+                        if (width > maxWidth) { maxWidth = width; }
+                        break;
+                    }
+                }
+
+                DebugAssert(depth <= 24) {
+                    Panic("An accuracy of %g was requested for variables with "
+                          "a range of [%g, %g], but this exceeds the "
+                          "granularity of single precision floats, which only "
+                          "support 24 bits of mantissa precision.",
+                          acc.Delta, x0, x1);
+                }       
+            }
+        }
+
+        buf.X0 = x0;
+        buf.X1 = x0 + maxWidth;
+    }
+
     return buf;
+}
+
+/* AccuracyToVectorRange returns the algo_QuantizedVectorRange which specifies
+ * particles to the lowest amount of precision that is still consistent with an
+ * input algo_Accuracy. */
+algo_QuantizedVectorRange AccuracyToVectorRange(
+    algo_Accuracy acc, float x0[3], float x1[3], algo_QuantizedVectorRange buf
+) {
+    DebugAssert(acc.Deltas.Len == 0) {
+        Panic("Variable accuracies not supported yet.%s", "");
+    }
+
+    uint8_t depth;
+    for (depth = 0; depth <= 24; depth++) {
+        if ((acc.Delta * (float) (1 << depth) > x1[0] - x0[0]) &&
+            (acc.Delta * (float) (1 << depth) > x1[1] - x0[1]) &&
+            (acc.Delta * (float) (1 << depth) > x1[2] - x0[2])) { break; }
+    }
+    if (depth > 24) {
+        Panic("An accuracy of %g was requested for variables with a range "
+              "of [(%g, %g, %g), (%g, %g, %g)], but this exceeds the "
+              "granularity of single precision floats, which only support "
+              "24 bits of mantissa precision.", acc.Delta, x0[0], x0[1], x0[2],
+              x1[0], x1[1], x1[2]);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        buf.X0[i] = x0[i];
+        buf.X1[i] = x0[i] + acc.Delta * (float) (1 << depth);
+    }
+    buf.Depth = depth;
+    buf.Depths = U8Seq_Sub(buf.Depths, 0, 0);
+
+    return buf;
+}
+
+/* AccuracyToXVectorRange returns the algo_QuantizedVectorRange which specifies
+ * particles to the lowest amount of precision that is still consistent with an
+ * input algo_Accuracy. It is identical to AccuracyToVectorRange, except it
+ * forces grid cells to be aligned to some global grid with a physical width of
+ * xWidth. */
+algo_QuantizedVectorRange AccuracyToXVectorRange(
+    algo_Accuracy acc, float x0[3], float x1[3],
+    float xWidth, algo_QuantizedVectorRange buf
+) {
+    DebugAssert(acc.Deltas.Len == 0) {
+        Panic("Variable accuracies not supported yet.%s", "");
+    }
+
+    uint8_t fullDepth;
+    for (fullDepth = 0; fullDepth <= 24; fullDepth++) {
+        if (acc.Delta * (float) (1 << fullDepth) > xWidth) { break; }
+    }
+    if (fullDepth > 24) {
+        Panic("An accuracy of %g was requested for variables with a range "
+              "of [(%g, %g, %g), (%g, %g, %g)], but this exceeds the "
+              "granularity of single precision floats, which only support "
+              "24 bits of mantissa precision.", acc.Delta, x0[0], x0[1], x0[2],
+              x1[0], x1[1], x1[2]);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        x0[i] = acc.Delta * floorf(x0[i] / acc.Delta);
+        x1[i] = acc.Delta * ceilf(x1[i] / acc.Delta);
+    }
+
+    return AccuracyToVectorRange(acc, x0, x1, buf);
 }
