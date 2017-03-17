@@ -571,7 +571,12 @@ algo_QuantizedVectorRange AccuracyToVectorRange(
         float prevDelta = -1;
         uint8_t prevDepth = (uint8_t)256;
 
-        float minWidth = 2*(x1 - x0);
+        float minWidth = 0;
+        for (int i = 0; i < 3; i++) {
+            if (minWidth < 2*(x1[i] - x0[i])) {
+                minWidth = 2*(x1[i] - x0[i]);
+            }
+        }
         if (minWidth == 0) { minWidth = FLT_MAX; }
 
         for (int32_t i = 0; i < acc.Deltas.Len; i++) {
@@ -609,9 +614,6 @@ algo_QuantizedVectorRange AccuracyToVectorRange(
             buf.X0[i] = x0[i];
             buf.X1[i] = x0[i] + minWidth;
         }
-
-        printf("%g %g %g || %g %g %g\n", x0[0], x0[1], x0[2],
-               buf.X1[0], buf.X1[1], buf.X1[2]);
     }
 
     return buf;
