@@ -538,30 +538,81 @@ algo_QuantizedRange AccuracyToRange(
 algo_QuantizedVectorRange AccuracyToVectorRange(
     algo_Accuracy acc, float x0[3], float x1[3], algo_QuantizedVectorRange buf
 ) {
-    DebugAssert(acc.Deltas.Len == 0) {
-        Panic("Variable accuracies not supported yet.%s", "");
-    }
+    if (acc.Deltas.Len == 0) {
 
-    uint8_t depth;
-    for (depth = 0; depth <= 24; depth++) {
-        if ((acc.Delta * (float) (1 << depth) > x1[0] - x0[0]) &&
-            (acc.Delta * (float) (1 << depth) > x1[1] - x0[1]) &&
-            (acc.Delta * (float) (1 << depth) > x1[2] - x0[2])) { break; }
-    }
-    if (depth > 24) {
-        Panic("An accuracy of %g was requested for variables with a range "
-              "of [(%g, %g, %g), (%g, %g, %g)], but this exceeds the "
-              "granularity of single precision floats, which only support "
-              "24 bits of mantissa precision.", acc.Delta, x0[0], x0[1], x0[2],
-              x1[0], x1[1], x1[2]);
-    }
+        uint8_t depth;
+        for (depth = 0; depth <= 24; depth++) {
+            if ((acc.Delta * (float) (1 << depth) > x1[0] - x0[0]) &&
+                (acc.Delta * (float) (1 << depth) > x1[1] - x0[1]) &&
+                (acc.Delta * (float) (1 << depth) > x1[2] - x0[2])) { break; }
+        }
 
-    for (int i = 0; i < 3; i++) {
-        buf.X0[i] = x0[i];
-        buf.X1[i] = x0[i] + acc.Delta * (float) (1 << depth);
+        if (depth > 24) {
+            Panic("An accuracy of %g was requested for variables with a range "
+                  "of [(%g, %g, %g), (%g, %g, %g)], but this exceeds the "
+                  "granularity of single precision floats, which only support "
+                  "24 bits of mantissa precision.", acc.Delta,
+                  x0[0], x0[1], x0[2], x1[0], x1[1], x1[2]);
+        }
+        
+        for (int i = 0; i < 3; i++) {
+            buf.X0[i] = x0[i];
+            buf.X1[i] = x0[i] + acc.Delta * (float) (1 << depth);
+        }
+        buf.Depth = depth;
+        buf.Depths = U8Seq_Sub(buf.Depths, 0, 0);
+        
+    } else {
+        
+        buf.Depths = U8SetLen(buf.Depths, acc.Deltas.Len);
+        
+        /* These are tracked for the common case where subseqeunt values have
+         * the same depth, as an optimization. */
+        float prevDelta = -1;
+        uint8_t prevDepth = (uint8_t)256;
+
+        float minWidth = 2*(x1 - x0);
+        if (minWidth == 0) { minWidth = FLT_MAX; }
+
+        for (int32_t i = 0; i < acc.Deltas.Len; i++) {
+            float delta = acc.Deltas.Data[i];
+
+            if (prevDelta == delta) {
+                buf.Depths.Data[i] = prevDepth;
+
+            } else {
+                uint8_t depth;
+                for (depth = 0; depth <= 24; depth++) {
+                    /* A faster approach would be to use binary search. */
+                    float width = acc.Deltas.Data[i] * (float) (1 << depth);
+                    if (width > x1[0] - x0[0] &&
+                        width > x1[1] - x0[1] &&
+                        width > x1[2] - x0[2]) {
+                        if (width < minWidth) { minWidth = width; }
+                        buf.Depths.Data[i] = depth;
+                        break;
+                    }
+                }
+
+                DebugAssert(depth <= 24) {
+                    Panic("An accuracy of %g was requested for variables with "
+                          "a range of [(%g, %g, %g), (%g, %g, %g)], but this "
+                          "exceeds the granularity of single precision "
+                          "floats, which only support 24 bits of mantissa "
+                          "precision.", acc.Delta,
+                          x0[0], x0[1], x0[2], x1[0], x1[1], x1[2]);
+                }       
+            }
+        }
+
+        for (int i = 0; i < 3; i++) {
+            buf.X0[i] = x0[i];
+            buf.X1[i] = x0[i] + minWidth;
+        }
+
+        printf("%g %g %g || %g %g %g\n", x0[0], x0[1], x0[2],
+               buf.X1[0], buf.X1[1], buf.X1[2]);
     }
-    buf.Depth = depth;
-    buf.Depths = U8Seq_Sub(buf.Depths, 0, 0);
 
     return buf;
 }

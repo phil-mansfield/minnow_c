@@ -139,21 +139,21 @@ bool testFVarRange() {
         algo_QuantizedRange range = q.FVarsRange[0];
 
         if (range.Depth != tests[i].depth) {
-            fprintf(stderr, "In test %d of testFVarRange, expected Depth = %"
-                    PRIu8", but got %"PRIu8".\n",
+            fprintf(stderr, "In test %d of part 1 of testFVarRange, expected "
+                    "Depth = %"PRIu8", but got %"PRIu8".\n",
                     i, tests[i].depth, range.Depth);
             res = false;
         }
 
         if (!almostEqual(range.X0, tests[i].x0, (float)1e-4)) {
-            fprintf(stderr, "In test %d of testFVarRange, expected X0 = %g, "
-                    "but got %g.\n", i, tests[i].x0, range.X0);
+            fprintf(stderr, "In test %d of part 1 of testFVarRange, expected "
+                    "X0 = %g, but got %g.\n", i, tests[i].x0, range.X0);
             res = false;
         }
 
         if (!almostEqual(range.X1, tests[i].x1, (float)1e-4)) {
-            fprintf(stderr, "In test %d of testFVarRange, expected X1 = %g, "
-                    "but got %g.\n", i, tests[i].x1, range.X1);
+            fprintf(stderr, "In test %d of part 1 of testFVarRange, expected "
+                    "X1 = %g, but got %g.\n", i, tests[i].x1, range.X1);
             res = false;
         }
 
@@ -208,22 +208,22 @@ bool testFVarRange() {
 
         for (int32_t j = 0; j < range.Depths.Len; j++) {
             if (range.Depths.Data[j] != testsNU[i].depths[j]) {
-                fprintf(stderr, "In test %d of testFVarRange, expected "
-                        "Depth[%d] = %"PRIu8", but got %"PRIu8".\n",
+                fprintf(stderr, "In test %d of part 2 of testFVarRange, "
+                        "expected Depth[%d] = %"PRIu8", but got %"PRIu8".\n",
                         i, j, testsNU[i].depths[j], range.Depths.Data[j]);
                 res = false;
             }
         }
 
         if (!almostEqual(range.X0, testsNU[i].x0, (float)1e-4)) {
-            fprintf(stderr, "In test %d of testFVarRange, expected X0 = %g, "
-                    "but got %g.\n", i, testsNU[i].x0, range.X0);
+            fprintf(stderr, "In test %d of part 2 of testFVarRange, expected "
+                    "X0 = %g, but got %g.\n", i, testsNU[i].x0, range.X0);
             res = false;
         }
 
         if (!almostEqual(range.X1, testsNU[i].x1, (float)1e-4)) {
-            fprintf(stderr, "In test %d of testFVarRange, expected X1 = %g, "
-                    "but got %g.\n", i, testsNU[i].x1, range.X1);
+            fprintf(stderr, "In test %d of part 2 of testFVarRange, expected "
+                    "X1 = %g, but got %g.\n", i, testsNU[i].x1, range.X1);
             res = false;
         }
 
@@ -246,6 +246,8 @@ bool testVRange() {
         {2, {{3}, {3}, {3}}, 1, {3, 3, 3}, {5, 5, 5}, 0},
         {2, {{3, 4}, {3, 4}, {3, 4}}, 2, {3, 3, 3}, {5, 5, 5}, 0},
         {2, {{3, 5}, {3, 5}, {3, 5}}, 2, {3, 3, 3}, {7, 7, 7}, 1},
+        {2, {{3, 4}, {4, 5}, {3, 4}}, 2, {3, 4, 3}, {5, 6, 5}, 0},
+        {2, {{3, 4}, {4, 6}, {3, 4}}, 2, {3, 4, 3}, {7, 8, 7}, 1},
     };
 
 	algo_QuantizedParticles q;
@@ -268,8 +270,8 @@ bool testVRange() {
         algo_QuantizedVectorRange range = q.VRange;
 
         if (range.Depth != tests[i].depth) {
-            fprintf(stderr, "In test %d of testFVarRange, expected Depth = %"
-                    PRIu8", but got %"PRIu8".\n",
+            fprintf(stderr, "In test %d of part 1 of testVRange, expected "
+                    "Depth = %"PRIu8", but got %"PRIu8".\n",
                     i, tests[i].depth, range.Depth);
             res = false;
         }
@@ -277,7 +279,67 @@ bool testVRange() {
         if (!almostEqual(range.X0[0], tests[i].x0[0], (float)1e-4) ||
             !almostEqual(range.X0[1], tests[i].x0[1], (float)1e-4) ||
             !almostEqual(range.X0[2], tests[i].x0[2], (float)1e-4)) {
-            fprintf(stderr, "In test %d of testFVarRange, expected X0 = "
+            fprintf(stderr, "In test %d of part 1 of testVRange, expected "
+                    "X0 = (%g, %g %g), but got (%g, %g %g).\n",
+                    i, tests[i].x0[0], tests[i].x0[1], tests[i].x0[2],
+                    range.X0[0], range.X0[1], range.X0[2]);
+            res = false;
+        }
+
+        if (!almostEqual(range.X1[0], tests[i].x1[0], (float)1e-4) ||
+            !almostEqual(range.X1[1], tests[i].x1[1], (float)1e-4) ||
+            !almostEqual(range.X1[2], tests[i].x1[2], (float)1e-4)) {
+            fprintf(stderr, "In test %d of part 1 of testVRange, expected "
+                    "X1 = (%g, %g %g), but got (%g, %g, %g).\n",
+                    i, tests[i].x1[0], tests[i].x1[1], tests[i].x1[2],
+                    range.X1[0], range.X1[1], range.X1[2]);
+            res = false;
+        }
+
+		Particles_Free(p);
+    }
+
+    struct {
+        float deltas[8], v[8][3];
+        int32_t len;
+        float x0[3], x1[3];
+        uint8_t depths[8];
+    } testsNU[] = {
+        /* Redo uniform tests to make sure nothing has been broken. */
+        {{2}, {{3}, {3}, {3}}, 1, {3, 3, 3}, {5, 5, 5}, {0}},
+        {{2, 2}, {{3, 4}, {3, 4}, {3, 4}}, 2, {3, 3, 3}, {5, 5, 5}, {0, 0}},
+        {{2, 2}, {{3, 5}, {3, 5}, {3, 5}}, 2, {3, 3, 3}, {7, 7, 7}, {1, 1}},
+        {{2, 2}, {{3, 4}, {4, 5}, {3, 4}}, 2, {3, 4, 3}, {5, 6, 5}, {0, 0}},
+        {{2, 2}, {{3, 4}, {4, 6}, {3, 4}}, 2, {3, 4, 3}, {7, 8, 7}, {1, 1}},
+
+        {{2, 1}, {{3, 4.75}, {3, 4.75}, {3, 4.75}}, 2,
+         {3, 3, 3}, {5, 5, 5}, {0, 1}},
+        {{2, 1.5}, {{3, 4.75}, {3, 4.75}, {3, 4.75}}, 2,
+         {3, 3, 3}, {5, 5, 5}, {0, 1}},
+        {{2, 1.5}, {{3, 5.75}, {3, 5.75}, {3, 5.75}}, 2,
+         {3, 3, 3}, {6, 6, 6}, {1, 1}}
+    };
+
+    for (int i = 0; i < LEN(testsNU); i++) {
+
+        algo_Particles p;
+        memset(&p, 0, sizeof(p));
+
+        for (int j = 0; j < 3; j++) {
+            p.X[j] = FSeq_New(testsNU[i].len);
+            p.V[j] = FSeq_FromArray(testsNU[i].v[j], testsNU[i].len);
+        }
+        p.XWidth = 10;
+        p.XAcc.Delta = 1;
+        p.VAcc.Deltas = FSeq_FromArray(testsNU[i].deltas, testsNU[i].len);
+
+        q = algo_Quantize(p, q);
+        algo_QuantizedVectorRange range = q.VRange;
+
+        if (!almostEqual(range.X0[0], tests[i].x0[0], (float)1e-4) ||
+            !almostEqual(range.X0[1], tests[i].x0[1], (float)1e-4) ||
+            !almostEqual(range.X0[2], tests[i].x0[2], (float)1e-4)) {
+            fprintf(stderr, "In test %d of part 2 of testVRange, expected X0 = "
                     "(%g, %g %g), but got (%g, %g %g).\n",
                     i, tests[i].x0[0], tests[i].x0[1], tests[i].x0[2],
                     range.X0[0], range.X0[1], range.X0[2]);
@@ -287,7 +349,7 @@ bool testVRange() {
         if (!almostEqual(range.X1[0], tests[i].x1[0], (float)1e-4) ||
             !almostEqual(range.X1[1], tests[i].x1[1], (float)1e-4) ||
             !almostEqual(range.X1[2], tests[i].x1[2], (float)1e-4)) {
-            fprintf(stderr, "In test %d of testFVarRange, expected X1 = "
+            fprintf(stderr, "In test %d of part 2 of testVRange, expected X1 = "
                     "(%g, %g %g), but got (%g, %g, %g).\n",
                     i, tests[i].x1[0], tests[i].x1[1], tests[i].x1[2],
                     range.X1[0], range.X1[1], range.X1[2]);
@@ -296,8 +358,7 @@ bool testVRange() {
 
 		Particles_Free(p);
     }
-
-    QuantizedParticles_Free(q);
+	QuantizedParticles_Free(q);
 
     return res;
 }
