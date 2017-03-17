@@ -484,25 +484,31 @@ algo_QuantizedRange AccuracyToRange(
         buf.Depth = depth;
         buf.Depths = U8Seq_Sub(buf.Depths, 0, 0);
     } else {
-        /* This can be optimized with a binary search if need be. */
 
         buf.Depths = U8SetLen(buf.Depths, acc.Deltas.Len);
 
+        /* These are tracked for the common case where subseqeunt values have
+         * the same depth, as an optimization. */
         float prevDelta = -1;
         uint8_t prevDepth = (uint8_t)256;
-        float maxWidth = x1 - x0;
+
+        float minWidth = 2*(x1 - x0);
+        if (minWidth == 0) { minWidth = FLT_MAX; }
 
         for (int32_t i = 0; i < acc.Deltas.Len; i++) {
             float delta = acc.Deltas.Data[i];
+
             if (prevDelta == delta) {
                 buf.Depths.Data[i] = prevDepth;
-            } else {
 
+            } else {
                 uint8_t depth;
                 for (depth = 0; depth <= 24; depth++) {
-                    float width = acc.Delta * (float) (1 << depth);
+                    /* A faster approach would be to use binary search. */
+                    float width = acc.Deltas.Data[i] * (float) (1 << depth);
                     if (width > x1 - x0) {
-                        if (width > maxWidth) { maxWidth = width; }
+                        if (width < minWidth) { minWidth = width; }
+                        buf.Depths.Data[i] = depth;
                         break;
                     }
                 }
@@ -518,7 +524,7 @@ algo_QuantizedRange AccuracyToRange(
         }
 
         buf.X0 = x0;
-        buf.X1 = x0 + maxWidth;
+        buf.X1 = x0 + minWidth;
     }
 
     return buf;

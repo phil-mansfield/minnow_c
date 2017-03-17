@@ -113,7 +113,9 @@ bool testFVarRange() {
 
 	algo_QuantizedParticles q;
 	memset(&q, 0, sizeof(q));
-	    for (int i = 0; i < LEN(tests); i++) {
+
+    for (int i = 0; i < LEN(tests); i++) {
+
         algo_Particles p;
         memset(&p, 0, sizeof(p));
 
@@ -152,6 +154,81 @@ bool testFVarRange() {
         if (!almostEqual(range.X1, tests[i].x1, (float)1e-4)) {
             fprintf(stderr, "In test %d of testFVarRange, expected X1 = %g, "
                     "but got %g.\n", i, tests[i].x1, range.X1);
+            res = false;
+        }
+
+		Particles_Free(p);
+    }
+	QuantizedParticles_Free(q);
+
+    /* Non-uniform delta tests. */
+
+    struct {
+        float deltas[8], var[8];
+        int32_t len;
+        float x0, x1;
+        uint8_t depths[8];
+    } testsNU[] = {
+        /* Redo uniform tests to make sure nothig has been broken. */
+        {{2}, {3}, 1, 3, 5, {0}},
+        {{2, 2}, {3, 4}, 2, 3, 5, {0, 0}},
+        {{2, 2}, {3, 5}, 2, 3, 7, {1, 1}},
+        {{0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
+         {1, 2, 3, 4, 5, 6, 8}, 7, 1, 9,
+         {4, 4, 4, 4, 4, 4, 4}},
+
+        {{2, 1}, {3, 4.75}, 2, 3, 5, {0, 1}},
+        {{2, 1.5}, {3, 4.75}, 2, 3, 5, {0, 1}},
+        {{2, 1.5}, {3, 5.75}, 2, 3, 6, {1, 1}}
+    };
+
+
+	memset(&q, 0, sizeof(q));
+
+    for (int i = 0; i < LEN(testsNU); i++) {
+
+        algo_Particles p;
+        memset(&p, 0, sizeof(p));
+
+        for (int j = 0; j < 3; j++) {
+            p.X[j] = FSeq_New(testsNU[i].len);
+        }
+        p.XWidth = 10;
+        p.XAcc.Delta = 1;
+
+        p.FVarsAcc = calloc(1, sizeof(*p.FVarsAcc));
+        p.FVarsAcc[0].Deltas = FSeq_FromArray(
+            testsNU[i].deltas, testsNU[i].len
+        );
+
+        p.FVars = FSeqSeq_New(1);
+        FSeq var = FSeq_New(testsNU[i].len);
+        p.FVars.Data[0] = var;
+        for (int32_t j = 0; j < var.Len; j++) {
+            var.Data[j] = testsNU[i].var[j];
+        }
+
+        q = algo_Quantize(p, q);
+        algo_QuantizedRange range = q.FVarsRange[0];
+
+        for (int32_t j = 0; j < range.Depths.Len; j++) {
+            if (range.Depths.Data[j] != testsNU[i].depths[j]) {
+                fprintf(stderr, "In test %d of testFVarRange, expected "
+                        "Depth[%d] = %"PRIu8", but got %"PRIu8".\n",
+                        i, j, testsNU[i].depths[j], range.Depths.Data[j]);
+                res = false;
+            }
+        }
+
+        if (!almostEqual(range.X0, testsNU[i].x0, (float)1e-4)) {
+            fprintf(stderr, "In test %d of testFVarRange, expected X0 = %g, "
+                    "but got %g.\n", i, testsNU[i].x0, range.X0);
+            res = false;
+        }
+
+        if (!almostEqual(range.X1, testsNU[i].x1, (float)1e-4)) {
+            fprintf(stderr, "In test %d of testFVarRange, expected X1 = %g, "
+                    "but got %g.\n", i, testsNU[i].x1, range.X1);
             res = false;
         }
 
