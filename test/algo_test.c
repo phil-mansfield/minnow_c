@@ -111,11 +111,11 @@ bool testFVarRange() {
         {0.5, {1, 2, 3, 4, 5, 6, 8}, 7, 1, 9, 4}
     };
 
-    for (int i = 0; i < LEN(tests); i++) {
+	algo_QuantizedParticles q;
+	memset(&q, 0, sizeof(q));
+	    for (int i = 0; i < LEN(tests); i++) {
         algo_Particles p;
-        algo_QuantizedParticles q;
         memset(&p, 0, sizeof(p));
-        memset(&q, 0, sizeof(q));
 
         for (int j = 0; j < 3; j++) {
             p.X[j] = FSeq_New(tests[i].len);
@@ -154,8 +154,11 @@ bool testFVarRange() {
                     "but got %g.\n", i, tests[i].x1, range.X1);
             res = false;
         }
-    }
 
+		Particles_Free(p);
+    }
+	QuantizedParticles_Free(q);
+	
     return res;
 }
 
