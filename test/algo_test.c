@@ -1,6 +1,6 @@
 #include "algo.h"
 #include "seq.h"
-#include <strings.h>
+#include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <inttypes.h>
