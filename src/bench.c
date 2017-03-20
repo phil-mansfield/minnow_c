@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include "bench.h"
 
-const double TARGET_TRIAL_LENGTH = 0.5;
-const double WALL_CLOCK_LIMIT = 30.0;
-
 void Benchmark_Start(Benchmark *b) {
     b->t0 = clock();
 }

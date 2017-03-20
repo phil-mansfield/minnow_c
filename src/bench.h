@@ -3,6 +3,9 @@
 
 #include <time.h>
 
+#define TARGET_TRIAL_LENGTH 0.5
+#define WALL_CLOCK_LIMIT 30.0
+
 typedef struct Benchmark {
     uint64_t N;
     clock_t tSum;
