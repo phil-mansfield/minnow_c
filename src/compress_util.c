@@ -17,22 +17,89 @@ FSeq FSeqSetLen(FSeq buf, int32_t len);
 /* Exported Functions */
 /**********************/
 
-void util_FRange(FSeq x, float *minPtr, float *maxPtr) {
-    DebugAssert(x.Len > 0) {
-        Panic("Zero length sequence given to FRange.%s", "");
+void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
+    int32_t n = x.Len;
+    float *xs = x.Data;
+
+    DebugAssert(n > 0) {
+        Panic("Empty sequence given to util_MinMax.%s", "");
     }
 
-    float min = x.Data[0];
-    float max = x.Data[0];
-    for (int32_t i = 0; i < x.Len; i++) {
-        if (x.Data[i] > max) {
-            max = x.Data[i];
-        } else if (x.Data[i] < min) {
-            min = x.Data[i];
+    /* This is a hot inner loop for some algorithms. */
+
+    float min, max;
+    int32_t i;
+    if ((n & 1) == 1) {
+        min = xs[0];
+        max = xs[0];
+        i = 1;
+    } else {
+        if (xs[0] > xs[1]) {
+            min = xs[1];
+            max = xs[0];
+        } else {
+            min = xs[0];
+            max = xs[1];
+        }
+        i = 2;
+    }
+
+    /* Doing pairwise comparisons reduces the number of conditionals from 2 * N
+     * to 3/2 * n */
+    for (; i < x.Len; i+=2) {
+        float x0 = xs[i];
+        float x1 = xs[i+1];
+
+        if (x0 > x1) {
+            if (x0 > max) { max = x0; }
+            if (x1 < min) { min = x1; }
+        } else {
+            if (x1 > max) { max = x1; }
+            if (x0 < min) { min = x0; }
         }
     }
-    *minPtr = min;
+    
     *maxPtr = max;
+    *minPtr = min;
+}
+
+void util_Periodic(FSeq x, float L) {
+    /* This is a hot inner loop for some algorithms. */
+
+    int32_t n = x.Len;
+    float *xs = x.Data;
+    
+    for (int32_t i = 0; i < n; i++) {
+        float val = xs[i];
+        if (val >= L) {
+            xs[i] -= L;
+        } else if (val < 0) {
+            xs[i] += L;
+        }
+    }
+}
+
+void util_UndoPeriodic(FSeq x, float L) {
+    /* This is a hot inner loop for some algorithms. */
+
+    if (x.Len == 0) { return; }
+
+    int32_t n = x.Len;
+    float *xs = x.Data;
+    float x0 = xs[0];
+    float L2 = L/2;
+
+    for (int32_t i = 0; i < n; i++) { xs[i] -= x0; }
+
+    for (int32_t i = 0; i < n; i++) {
+        if (xs[i] >= L2) {
+            xs[i] -= L;
+        } else if (xs[i] < -L2) {
+            xs[i] += L;
+        }
+    }
+
+    for (int32_t i = 0; i < n; i++) { xs[i] += x0; }
 }
 
 U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
