@@ -28,8 +28,12 @@ GCC_CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -W
 ICC_CFLAGS= -O2 -g -D DEBUG -Werror -std=c99 -pedantic -w3 -wd1419,1572,2259,2415
 
 # Select the compiler and compiler flags that you want to use.
+#CC=gcc
+#CFLAGS=$(GCC_CFLAGS)
 CC=clang
-CFLAGS =$(CLANG_CFLAGS)
+CFLAGS=$(CLANG_CFLAGS)
+#CC=icc
+#CFLAGS=$(ICC_CFLAGS)
 
 # Add/remove any additional files that aren't in src at the end of this list.
 SOURCES=$(wildcard src/*.c) lz4/lib/lz4.c
