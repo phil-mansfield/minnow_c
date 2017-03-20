@@ -58,7 +58,9 @@ uint64_t rand_Uint63Lim(rand_State *state, uint64_t lim) {
 }
 
 float rand_Float(rand_State *state) {
-    return (float) rand_Uint64(state) / (float) UINT64_MAX;
+    uint64_t x = rand_Uint64(state);
+    const uint64_t mask = ~((~0) << 24);
+    return (float) (x & mask) / (float) (mask + 1) ;
 }
 
 bool rand_Bool(rand_State *state) {

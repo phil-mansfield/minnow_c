@@ -37,13 +37,13 @@ void Benchmark_Run(char *name, uint64_t (*trial) (Benchmark*), uint64_t bytes) {
 
     clock_t start = clock();
 
-    for (uint64_t i = 0; i < 15 && trialLength < TARGET_TRIAL_LENGTH; i++) {
+    for (uint64_t i = 0; i < 30 && trialLength < TARGET_TRIAL_LENGTH; i++) {
         clock_t ti = clock();
         if ((ti - start) / (double) CLOCKS_PER_SEC > WALL_CLOCK_LIMIT) {
             break;
         }
 
-        uint64_t n = 1 << (2*i);
+        uint64_t n = 1 << i;
         b.N = n;
         (*trial)(&b);
 

@@ -47,7 +47,7 @@ void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
     for (; i < n; i++) {
         if (xs[i] > max) {
             max = xs[i];
-        } else if (xs[i] < min){
+        } else if (xs[i] < min) {
             min = xs[i];
         }
     }
@@ -61,7 +61,7 @@ void util_Periodic(FSeq x, float L) {
 
     int32_t n = x.Len;
     float *xs = x.Data;
-    
+
     for (int32_t i = 0; i < n; i++) {
         float val = xs[i];
         if (val >= L) {
@@ -80,19 +80,14 @@ void util_UndoPeriodic(FSeq x, float L) {
     int32_t n = x.Len;
     float *xs = x.Data;
     float x0 = xs[0];
-    float L2 = L/2;
-
-    for (int32_t i = 0; i < n; i++) { xs[i] -= x0; }
 
     for (int32_t i = 0; i < n; i++) {
-        if (xs[i] >= L2) {
+        if (xs[i] - x0 >= L/2) {
             xs[i] -= L;
-        } else if (xs[i] < -L2) {
+        } else if (xs[i] - x0  < -L/2) {
             xs[i] += L;
         }
     }
-
-    for (int32_t i = 0; i < n; i++) { xs[i] += x0; }
 }
 
 U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
@@ -102,14 +97,12 @@ U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
     }
 
     buf = U32SeqSetLen(buf, x.Len);
-    checkBinIndexRange(x, x0, dx);
     
     for (int32_t i = 0; i < x.Len; i++) {
         DebugAssert(level.Data[i] <= 32) {
             Panic("level[%"PRId32"] set to %"PRIu8", which is above the "
                   "limit of 32.", i, level.Data[i]);
         }
-
 
         float delta = (x.Data[i] - x0) / dx;
         if (delta < 0) { // must be floating point error
@@ -134,10 +127,8 @@ U32Seq util_UniformBinIndex(
     }
 
     buf = U32SeqSetLen(buf, x.Len);
-    checkBinIndexRange(x, x0, dx);
     
     float numBins = (float) (1 << level);
-
     for (int32_t i = 0; i < x.Len; i++) {
         float delta = (x.Data[i] - x0) / dx;
         if (delta < 0) { // must be floating point error
@@ -172,14 +163,6 @@ FSeq util_UndoBinIndex(
         float binWidth = dx / ((float) bins);
         float offset = x0 + binWidth*((float)idx.Data[i]);
         buf.Data[i] = offset + rand_Float(state)*binWidth;
-
-        // Dealing with floating point errors:
-        float x1 = x0 + dx;
-        if (buf.Data[i] < x0) {
-            buf.Data[i] = x0;
-        } else if (buf.Data[i] >= x1) {
-            buf.Data[i] = nextafterf(x1, -INFINITY);
-        }
     }
 
     return buf;
@@ -201,14 +184,6 @@ FSeq util_UndoUniformBinIndex(
 
         float offset = x0 + binWidth*((float)idx.Data[i]);
         buf.Data[i] = offset + rand_Float(state)*binWidth;
-
-        // Dealing with floating point errors:
-        float x1 = x0 + dx;
-        if (buf.Data[i] < x0) {
-            buf.Data[i] = x0;
-        } else if (buf.Data[i] >= x1) {
-            buf.Data[i] = nextafterf(x1, -INFINITY);
-        }
     }
 
     return buf;
@@ -428,22 +403,4 @@ FSeq FSeqSetLen(FSeq buf, int32_t len) {
     buf = FSeq_Extend(buf, len);
     buf = FSeq_Sub(buf, 0, len);
     return buf;
-}
-
-void checkBinIndexRange(FSeq x, float x0, float dx) {
-    if (dx > 0)  {
-        for (int32_t i = 0; i < x.Len; i++) {
-            if (x.Data[i] < x0 || x.Data[i] >= x0 + dx) {
-                Panic("Element %"PRId32" of x = %g, but range is [%g, %g).",
-                      i, x.Data[i], x0, x0+dx);
-            }
-        }
-    } else {
-        for (int32_t i = 0; i < x.Len; i++) {
-            if (x.Data[i] > x0 || x.Data[i] <= x0 + dx) {
-                Panic("Element %"PRId32" of x = %g, but range is (%g, %g].",
-                      i, x.Data[i], x0+dx, x0);
-            }
-        }
-    }
 }
