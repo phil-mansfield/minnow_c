@@ -79,69 +79,20 @@ def runAllTests(testDir):
         print("All tests passed!")
     else:
         print("Failed %d/%d tests." % (failSum, len(tests)))
-
-def powerOfTenRound(x):
-    lowPow = int(10**(math.ceil(math.log10(x)) - 1))
-    return int(x / lowPow) * lowPow
-
-def estimateOpCount(bench, benchmarkTime):
-    ops = 1
-    eta = 0.
-    iters = 0
-    
-    while eta < benchmarkTime * ESTIMATE_FRACTION:
-        iters += 1
-        ops *= 2
-
-        t0 = time.time()
-        subprocess.call(["./%s" % bench, str(ops)])
-        t1 = time.time()
-        eta = t1 - t0
-
-        if iters == MAX_ESTIMATE_ITERS: break
-
-    return max(1, powerOfTenRound(ops * benchmarkTime / eta))
         
 
-def runAllBenchmarks(benchDir, benchmarkTime=1.0):
+def runAllBenchmarks(benchDir):
     benches = getAllBenchmarks(benchDir)
     if len(benches) == 0: return
 
-    col0Name = "Test Name"
-    col1Name = "Ops"
-    col2Name = "Secs"
-    col3Name = "Secs per op"
-    col0Width = max(max(map(len, benches)), len(col0Name))
-    col1Width = max(len(col1Name), MIN_FLOAT_WIDTH)
-    col2Width = max(len(col2Name), MIN_FLOAT_WIDTH)
-    col3Width = max(len(col3Name), MIN_FLOAT_WIDTH)
-
-    print("%*s %*s %*s %*s" % (col0Width, col0Name,
-                               col1Width, col1Name,
-                               col2Width, col2Name,
-                               col3Width, col3Name))
-
-    t00 = time.time()
-    for bench in benches:
-        print("%*s" % (col0Width, bench), end=" ")
-        ops = estimateOpCount(bench, benchmarkTime)
-
-        t0 = time.time()
-        subprocess.call(["%s" % os.path.join(benchDir, bench), str(ops)])
-        t1 = time.time()
-
-        print("%*g %*g %*g" % (col1Width, ops, col2Width, t1 - t0,
-                               col3Width, (t1 - t0) / ops))
-
-    t01 = time.time()
-    print("Total benchmark time: %f s" % (t01 - t00))
-        
+    for i, bench in enumerate(benches):
+        if i > 0: print()
+        print("%s:" % bench)
+        subprocess.call(["%s" % os.path.join(benchDir, bench)])
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: '$ python runTests.py <input-dir> " + 
-              "[test|bench] [benchmark-time]'.\nbenchmark-time is required" +
-              "if mode is set to bench.")
+        print("Usage: '$ python runTests.py <input-dir> [test | bench]")
         sys.exit(1)
 
     inDir = sys.argv[1]
@@ -152,8 +103,4 @@ if __name__ == "__main__":
         runAllTests(inDir)
     elif testType == "bench":
         print("Running all benchmarks...")
-        if len(sys.argv) == 3:
-            runAllBenchmarks(inDir)
-        else:
-            benchmarkTime = float(sys.argv[3])
-            runAllBenchmarks(inDir, benchmarkTime)
+        runAllBenchmarks(inDir)

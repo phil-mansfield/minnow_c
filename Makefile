@@ -103,6 +103,8 @@ $(SO_TARGET): build $(OBJECTS) $(HEADERS)
 
 test: $(TESTS) scripts/run_tests.py $(TARGET)
 	@python scripts/run_tests.py test/ test
+
+bench: $(TESTS) scripts/run_tests.py $(TARGET)
 	@python scripts/run_tests.py test/ bench
 
 clean:
