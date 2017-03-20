@@ -10,9 +10,7 @@
 #include "seq.h"
 #include "rand.h"
 
-/* util_FMinMax computes the minimum and maximum of a sequence. For almost all
- * data sets it's faster to call util_FMinMax than it is to run the normal
- * naive loop. */
+/* util_FMinMax computes the minimum and maximum of a sequence. */
 void util_MinMax(FSeq x, float *minPtr, float *maxPtr);
 
 /* util_Periodic applies periodic boundary conditions of length L to a
