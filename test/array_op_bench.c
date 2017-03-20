@@ -11,15 +11,12 @@ void Shuffle(FSeq x);
 
 uint64_t MinMaxTrial_100MB(Benchmark *b) {
     FSeq x = FSeq_New((int32_t) 25e6);
-
+	Shuffle(x);
     Benchmark_Start(b);
 
+	float min, max;
+	
     for (uint64_t i = 0; i < b->N; i++) {
-        Benchmark_Pause(b);
-        Shuffle(x);
-        Benchmark_Resume(b);
-
-        float min, max;
         util_MinMax(x, &min, &max);
     }
 
