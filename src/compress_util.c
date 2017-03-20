@@ -44,18 +44,11 @@ void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
         i = 2;
     }
 
-    /* Doing pairwise comparisons reduces the number of conditionals from 2 * N
-     * to 3/2 * n */
-    for (; i < x.Len; i+=2) {
-        float x0 = xs[i];
-        float x1 = xs[i+1];
-
-        if (x0 > x1) {
-            if (x0 > max) { max = x0; }
-            if (x1 < min) { min = x1; }
-        } else {
-            if (x1 > max) { max = x1; }
-            if (x0 < min) { min = x0; }
+    for (; i < n; i++) {
+        if (xs[i] > max) {
+            max = xs[i];
+        } else if (xs[i] < min){
+            min = xs[i];
         }
     }
     
