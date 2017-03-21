@@ -577,16 +577,16 @@ algo_QuantizedParticles Quantize(
         }
     }
 
+    buf.FVars = U32SeqSeqSetLen(buf.FVars, p.FVars.Len);
+
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         FSeq var = p.FVars.Data[i];
         if (var.Len == 0) { continue; }
-
-		printf("%d %g %g\n", i, buf.FVarsRange[i].X0, buf.FVarsRange[i].X1);
 		
         float f0 = buf.FVarsRange[i].X0;
         float df = buf.FVarsRange[i].X1 - buf.FVarsRange[i].X0;
         if (buf.FVarsRange[i].Depths.Len == 0) {
-		    buf.FVars.Data[i] = util_UniformBinIndex(
+            buf.FVars.Data[i] = util_UniformBinIndex(
                 var, buf.FVarsRange[i].Depth, f0, df, buf.FVars.Data[i]
             );
         } else {
