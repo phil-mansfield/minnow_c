@@ -10,17 +10,20 @@
 #include "seq.h"
 #include "rand.h"
 
-/* util_FMinMax computes the minimum and maximum of a sequence. */
+/* util_MinMax computes the minimum and maximum of a sequence. */
 void util_MinMax(FSeq x, float *minPtr, float *maxPtr);
+void util_U32MinMax(U32Seq x, uint32_t *minPtr, uint32_t *maxPtr);
 
 /* util_Periodic applies periodic boundary conditions of length L to a
  * sequence. It assumes that all points are no more than a distance L outside
  * of the range. */
 void util_Periodic(FSeq x, float L);
+void util_U32Periodic(U32Seq x, uint32_t L);
 
 /* util_UndoPeriodic reverses a call to Periodic so that all all values are 
  * within a contiguous range. */
 void util_UndoPeriodic(FSeq x, float L);
+void util_U32UndoPeriodic(U32Seq x, uint32_t L);
 
 /* util_BinIndex returns the bin indices of a sequence of floats, x, 
  * within the range [x0, x0 + dx) with bin width dx/(2^level[i]). A buffer

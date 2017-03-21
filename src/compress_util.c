@@ -56,6 +56,45 @@ void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
     *minPtr = min;
 }
 
+void util_U32MinMax(U32Seq x, uint32_t *minPtr, uint32_t *maxPtr) {
+    int32_t n = x.Len;
+    uint32_t *xs = x.Data;
+
+    DebugAssert(n > 0) {
+        Panic("Empty sequence given to util_MinMax.%s", "");
+    }
+
+    /* This is a hot inner loop for some algorithms. */
+
+    uint32_t min, max;
+    int32_t i;
+    if ((n & 1) == 1) {
+        min = xs[0];
+        max = xs[0];
+        i = 1;
+    } else {
+        if (xs[0] > xs[1]) {
+            min = xs[1];
+            max = xs[0];
+        } else {
+            min = xs[0];
+            max = xs[1];
+        }
+        i = 2;
+    }
+
+    for (; i < n; i++) {
+        if (xs[i] > max) {
+            max = xs[i];
+        } else if (xs[i] < min) {
+            min = xs[i];
+        }
+    }
+    
+    *maxPtr = max;
+    *minPtr = min;
+}
+
 void util_Periodic(FSeq x, float L) {
     /* This is a hot inner loop for some algorithms. */
 
@@ -69,6 +108,18 @@ void util_Periodic(FSeq x, float L) {
         } else if (val < 0) {
             xs[i] += L;
         }
+    }
+}
+
+void util_U32Periodic(U32Seq x, uint32_t L) {
+    /* This is a hot inner loop for some algorithms. */
+
+    int32_t n = x.Len;
+    uint32_t *xs = x.Data;
+
+    for (int32_t i = 0; i < n; i++) {
+        uint32_t val = xs[i];
+        if (val >= L) { xs[i] -= L; }
     }
 }
 
@@ -87,6 +138,34 @@ void util_UndoPeriodic(FSeq x, float L) {
         } else if (xs[i] - x0  < -L/2) {
             xs[i] += L;
         }
+    }
+}
+
+void util_U32UndoPeriodic(U32Seq x, uint32_t L) {
+    DebugAssert(UINT32_MAX/2 > L) {
+        Panic("L range of %"PRIu32" not supported by util_U32UndoPeriodic.", L);
+    }
+
+    if (x.Len == 0) { return; }
+
+    int32_t n = x.Len;
+    uint32_t *xs = x.Data;
+
+    for (int32_t i = 0; i < n; i++) { xs[i] += L; }
+
+    uint32_t x0 = xs[0];
+    uint32_t min = x0;
+    for (int32_t i = 0; i < n; i++) {
+        if (xs[i] >= L/2 + x0) {
+            xs[i] -= L;
+            if (xs[i] < min) { min = xs[i]; }
+        } else if (xs[i] < x0 - L + L/2) {
+            xs[i] += L;
+        }
+    }
+
+    if (min >= L) {
+        for (int32_t i = 0; i < n; i++) { xs[i] -= L; }
     }
 }
 
