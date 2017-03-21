@@ -87,7 +87,7 @@ src/base_seq.h: scripts/seq_gen.py Makefile resources/seq_base.h
 src/seq.o: src/base_seq.h
 lz4/lib/lz4.o:
 	$(CC) -O3 -std=c99 -Wall -Wextra -c lz4/lib/lz4.c -o lz4/lib/lz4.o
-src/compress_util.o:
+src/compress_util.o: src/compress_util.c src/compress_util.h
 	$(CC) -I lz4/lib $(CFLAGS) -c src/compress_util.c -o src/compress_util.o
 %.o: %.c %.h Makefile
 	$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDES_WITH_FLAG)

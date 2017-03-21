@@ -1,12 +1,13 @@
-#include "algo.h"
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include "debug.h"
 #include <float.h>
 #include <string.h>
-#include "math.h"
+#include <math.h>
 
+#include "algo.h"
+#include "debug.h"
+#include "compress_util.h"
     
 /************************/
 /* Forward Declarations */
@@ -26,6 +27,7 @@ void U32CheckVectorValues(
 U8Seq U8SetLen(U8Seq s, int32_t len);
 U32Seq U32SetLen(U32Seq s, int32_t len);
 U64Seq U64SetLen(U64Seq s, int32_t len);
+U64SeqSeq U64SeqSeqSetLen(U64SeqSeq s, int32_t len);
 FSeq FSetLen(FSeq s, int32_t len);
 
 /* Functions that convert algo_Accuracy structs to algo_*Range structs. */
@@ -42,12 +44,21 @@ algo_QuantizedVectorRange AccuracyToXVectorRange(
     float xWdith, algo_QuantizedVectorRange buf
 );
 
-/* Range calculation */
-void FMinMax(FSeq x, float *minOut, float *maxOut);
-void FBoundedMinMax(FSeq x, float dx, float *minOut, float *maxOut);
-
 /* algo_Quantize subprocedures */
+void UndoPeriodic(algo_Particles p);
+void Periodic(algo_Particles p);
+void Logify(algo_Particles p);
+void UndoLogify(algo_Particles p);
 algo_QuantizedParticles SetQuantizedRanges(
+    algo_Particles p, algo_QuantizedParticles buf
+);
+algo_QuantizedParticles Quantize(
+    algo_Particles p, algo_QuantizedParticles buf
+);
+algo_QuantizedParticles VectorizeIDs(
+    algo_Particles p, algo_QuantizedParticles buf
+);
+algo_QuantizedParticles CopyU64s(
     algo_Particles p, algo_QuantizedParticles buf
 );
 
@@ -58,17 +69,19 @@ algo_QuantizedParticles SetQuantizedRanges(
 algo_QuantizedParticles algo_Quantize(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
+    UndoPeriodic(p);
+    Logify(p);
+
+    buf = VectorizeIDs(p, buf);
+
     buf = SetQuantizedRanges(p, buf);
 
-    /* Quantize floating point variables. */
+    buf = Quantize(p, buf);
 
-    /* Convert IDs into ID vectors. */
+    buf = CopyU64s(p, buf);
 
-    /* Copy (not reference) uint64 variables into QuantizedParticles. */
-
-	/* Placeholder: */
-	buf.FVars = U32SeqSeq_Extend(buf.FVars, p.FVars.Len);
-	buf.FVars = U32SeqSeq_Sub(buf.FVars, 0, p.FVars.Len);
+    UndoLogify(p);
+    Periodic(p);
 	
     return buf;
 }
@@ -390,6 +403,28 @@ U64Seq U64SetLen(U64Seq s, int32_t len) {
     return s;
 }
 
+U32SeqSeq U32SeqSeqSetLen(U32SeqSeq s, int32_t len) {
+    int32_t initialSize = s.Len;
+    s = U32SeqSeq_Extend(s, len);
+    s = U32SeqSeq_Sub(s, 0, len);
+    if (initialSize < s.Len) {
+        memset(s.Data + initialSize, 0,
+               (size_t)(s.Len - initialSize) * sizeof(*s.Data));
+    }
+    return s;
+}
+
+U64SeqSeq U64SeqSeqSetLen(U64SeqSeq s, int32_t len) {
+    int32_t initialSize = s.Len;
+    s = U64SeqSeq_Extend(s, len);
+    s = U64SeqSeq_Sub(s, 0, len);
+    if (initialSize < s.Len) {
+        memset(s.Data + initialSize, 0,
+               (size_t)(s.Len - initialSize) * sizeof(*s.Data));
+    }
+    return s;
+}
+
 FSeq FSetLen(FSeq s, int32_t len) {
     s = FSeq_Extend(s, len);
     s = FSeq_Sub(s, 0, len);
@@ -397,38 +432,46 @@ FSeq FSetLen(FSeq s, int32_t len) {
     return s;
 }
 
-/* MinMax calculates the minimum and maximum values of a sequence  */
-void FMinMax(FSeq x, float *minOut, float *maxOut) {
-    DebugAssert(x.Len > 0) {
-        Panic("Cannot find maximum of an empty sequence.%s", "");
+void UndoPeriodic(algo_Particles p) {
+    for (int i = 0; i < 3; i++) {
+        util_UndoPeriodic(p.X[i], p.XWidth);
     }
+}
 
-    float min = x.Data[0];
-    float max = x.Data[0];
-    for (int32_t i = 0; i < x.Len; i++) {
-        if (x.Data[i] > max) {
-            max = x.Data[i];
-        } else if (x.Data[i] < min) {
-            min = x.Data[i];
+void Periodic(algo_Particles p) {
+    for (int i = 0; i < 3; i++) {
+        util_Periodic(p.X[i], p.XWidth);
+    }
+}
+
+void Logify(algo_Particles p) {
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        FSeq var = p.FVars.Data[i];
+        for (int32_t j = 0; j < var.Len; j++) {
+            var.Data[i] = log10f(var.Data[i]);
         }
     }
-
-    *minOut = min;
-    *maxOut = max;
 }
 
-void FBoundedMinMax(FSeq x, float dx, float *minOut, float *maxOut) {
-    (void) dx;
-    FMinMax(x, minOut, maxOut);
+void UndoLogify(algo_Particles p) {
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        FSeq var = p.FVars.Data[i];
+        for (int32_t j = 0; j < var.Len; j++) {
+            var.Data[i] = powf(10, var.Data[i]);
+        }
+    }
 }
 
-/* SetQuantizedRanges sets all the *Range fields to the correct values. */
+/* SetQuantizedRanges sets all the *Range fields to the correct values.
+ * 
+ * If IDs have been supplied, this assumes that they have already been
+ * vectorized within buf. */
 algo_QuantizedParticles SetQuantizedRanges(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
     float xMin[3], xMax[3];
     for (int i = 0; i < 3; i++) {
-        FBoundedMinMax(p.X[i], p.XWidth, &xMin[i], &xMax[i]);
+        util_MinMax(p.X[i], &xMin[i], &xMax[i]);
     }
     buf.XRange = AccuracyToXVectorRange(
         p.XAcc, xMin, xMax, p.XWidth, buf.XRange
@@ -437,26 +480,136 @@ algo_QuantizedParticles SetQuantizedRanges(
     if (p.V[0].Len > 0) {
         float vMin[3], vMax[3];
         for (int i = 0; i < 3; i++) {
-            FMinMax(p.V[i], &vMin[i], &vMax[i]);
+            util_MinMax(p.V[i], &vMin[i], &vMax[i]);
         }
-        buf.VRange = AccuracyToVectorRange(
-            p.VAcc, vMin, vMax, buf.VRange
-        );
+        buf.VRange = AccuracyToVectorRange(p.VAcc, vMin, vMax, buf.VRange);
+    }
+
+
+    if (buf.ID[0].Len > 0) {
+        uint32_t IDMin, IDMax;
+        for (int i = 0; i < 3; i++) {
+            util_U32MinMax(buf.ID[i], &IDMin, &IDMax);
+            buf.IDRange.X0[i] = IDMin;
+            buf.IDRange.X1[i] = IDMax;
+        }
     }
 
     buf.FVarsRange = realloc(
         buf.FVarsRange, sizeof(*buf.FVarsRange) * (size_t)p.FVars.Len
     );
+
 	memset(buf.FVarsRange + buf.FVars.Len, 0,
 		   sizeof(*buf.FVarsRange) * (size_t)(p.FVars.Len - buf.FVars.Len));
 	
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         if (p.FVars.Data[i].Len == 0) { continue; }
         float min, max;
-        FMinMax(p.FVars.Data[i], &min, &max);
+        util_MinMax(p.FVars.Data[i], &min, &max);
         buf.FVarsRange[i] = AccuracyToRange(
             p.FVarsAcc[i], min, max, buf.FVarsRange[i]
         );
+    }
+
+    return buf;
+}
+
+/* VectorizedIDs converts the particle IDs into vectors. */
+algo_QuantizedParticles VectorizeIDs(
+    algo_Particles p, algo_QuantizedParticles buf
+) {
+    if (p.ID.Len == 0) {
+        for (int i = 0; i < 3; i++) {
+            buf.ID[i] = U32Seq_Sub(buf.ID[i], 0, 0);
+        }
+        return buf;
+    }
+
+    buf.IDWidth = p.IDWidth;
+    for (int i = 0; i < 3; i++) {
+        buf.ID[i] = U32SetLen(buf.ID[i], p.ID.Len);
+    }
+
+    uint64_t w = (uint64_t) buf.IDWidth;
+    for (int32_t i = 0; i < p.ID.Len; i++)  {
+        uint64_t id = p.ID.Data[i];
+        buf.ID[0].Data[i] = (uint32_t) (id % w);
+        buf.ID[1].Data[i] = (uint32_t) ((id / w) % w);
+        buf.ID[2].Data[i] = (uint32_t) (id / (w*w));
+    }
+
+    return buf;
+}
+
+/* Quantize floats quantizes the floating point fields of p into buf. */
+algo_QuantizedParticles Quantize(
+    algo_Particles p, algo_QuantizedParticles buf
+) {
+    for (int i = 0; i < 3; i++) {
+        float x0 = buf.XRange.X0[i];
+        float dx = buf.XRange.X1[i] - buf.XRange.X0[i];
+
+        if (buf.XRange.Depths.Len == 0) {
+            buf.X[i] = util_UniformBinIndex(
+                p.X[i], buf.XRange.Depth, x0, dx, buf.X[i]
+            );
+        } else {
+            buf.X[i] = util_BinIndex(
+                p.X[i], buf.XRange.Depths, x0, dx, buf.X[i]
+            );
+        }
+    }
+
+    if (p.V[0].Len != 0) {
+        for (int i = 0; i < 3; i++) {
+            float v0 = buf.VRange.X0[i];
+            float dv = buf.VRange.X1[i] - buf.VRange.X0[i];
+
+            if (buf.XRange.Depths.Len == 0) {
+                buf.V[i] = util_UniformBinIndex(
+                    p.V[i], buf.VRange.Depth, v0, dv, buf.V[i]
+                );
+            } else {
+                buf.V[i] = util_BinIndex(
+                    p.V[i], buf.VRange.Depths, v0, dv, buf.V[i]
+                );
+            }
+        }
+    }
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        FSeq var = p.FVars.Data[i];
+        if (var.Len == 0) { continue; }
+
+        float f0 = buf.FVarsRange[i].X0;
+        float df = buf.FVarsRange[i].X1 - buf.FVarsRange[i].X0;
+        if (buf.FVarsRange[i].Depths.Len == 0) {
+            buf.FVars.Data[i] = util_UniformBinIndex(
+                var, buf.FVarsRange[i].Depth, f0, df, buf.FVars.Data[i]
+            );
+        } else {
+            buf.FVars.Data[i] = util_BinIndex(
+                var, buf.FVarsRange[i].Depths, f0, df, buf.FVars.Data[i]
+            );
+        }
+    }
+
+    return buf;
+}
+
+/* CopyU64s copies the U64 variables from p to buf. */
+algo_QuantizedParticles CopyU64s(
+    algo_Particles p, algo_QuantizedParticles buf
+) {
+    buf.U64Vars = U64SeqSeqSetLen(buf.U64Vars, p.U64Vars.Len);
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        U64Seq src = p.U64Vars.Data[i];
+        U64Seq dst = buf.U64Vars.Data[i];
+
+        dst = U64SetLen(dst, src.Len);
+        buf.U64Vars.Data[i] = dst;
+
+        memcpy(dst.Data, src.Data, sizeof(dst.Data[0]) * (size_t)dst.Len);
     }
 
     return buf;
@@ -485,6 +638,7 @@ algo_QuantizedRange AccuracyToRange(
         buf.X1 = x0 + acc.Delta * (float) (1 << depth);
         buf.Depth = depth;
         buf.Depths = U8Seq_Sub(buf.Depths, 0, 0);
+
     } else {
 
         buf.Depths = U8SetLen(buf.Depths, acc.Deltas.Len);

@@ -20,10 +20,11 @@ rand_State *rand_Seed(uint64_t seed, int32_t n);
 
 /* rand_Uint64 returns a random integer and updates the given RNG state. */
 uint64_t rand_Uint64(rand_State *state);
+float rand_Float(rand_State *state);
+bool rand_Bool(rand_State *state);
+
 /* rand_Uint64Range return a random (63 bit!) integer in the range [0, lim), and
  * updates the given RNG state. This function Panics if low >= high. */
 uint64_t rand_Uint63Lim(rand_State *state, uint64_t lim);
-float rand_Float(rand_State *state);
-bool rand_Bool(rand_State *state);
 
 #endif /* MNW_RAND_H_ */

@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "compress_util.h"
 #include "seq.h"
 #include "rand.h"
 
 #define LEN(x) (int) (sizeof(x) / sizeof(x[0]))
+#define MIN(x, y) ((x) < (y)? (x): (y))
 
 bool testU32TransposeBytes();
 bool testU8DeltaEncode();
@@ -18,13 +20,19 @@ bool testUndoBinIndex();
 bool testUniformBinIndex();
 bool testUndoUniformBinIndex();
 bool testU32UniformPack();
+bool testU32UndoPeriodic();
 bool testEntropyEncode();
+bool testFastUniformCompress();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
+bool FSeqAlmostEqual(FSeq x1, FSeq x2, float eps, float L);
 
 void U8SeqPrint(U8Seq s);
 void U32SeqPrint(U32Seq s);
+void FSeqPrint(FSeq s);
+
+void FShuffle(FSeq x, rand_State *state);
 
 int main() {
     bool res = true;
@@ -36,7 +44,9 @@ int main() {
     res = res && testUniformBinIndex();
     res = res && testUndoUniformBinIndex();
     res = res && testU32UniformPack();
+    res = res && testU32UndoPeriodic();
     res = res && testEntropyEncode();
+    res = res && testFastUniformCompress();
 
     return !res;
 }
@@ -540,6 +550,37 @@ bool testU32UniformPack() {
     return res;
 }
 
+bool testU32UndoPeriodic() {
+    bool res = true;
+
+    struct { uint32_t L, x[8], out[8]; int32_t len; } tests[] = {
+        { 10, {0}, {0}, 0 },
+        { 10, {1}, {1}, 1 },
+        { 10, {9}, {9}, 1 },
+        { 10, {1, 2}, {1, 2}, 2 },
+        { 10, {8, 9}, {8, 9}, 2 },
+        { 10, {1, 9}, {11, 9}, 2},
+        { 10, {9, 1}, {9, 11}, 2},
+        { 10, {0, 1, 2, 3, 4, 5, 6, 7}, {10, 11, 12, 13, 14, 5, 6, 7}, 8}
+    };
+
+    for (int i = 0; i < LEN(tests); i++) {
+        U32Seq x = U32Seq_FromArray(tests[i].x, tests[i].len);
+        U32Seq out = U32Seq_FromArray(tests[i].out, tests[i].len);
+        util_U32UndoPeriodic(x, tests[i].L);
+        
+        if (!U32SeqEqual(x, out)) {
+            fprintf(stderr, "In test %d of testU32UndoPeriodic, got ", i);
+            U32SeqPrint(x);
+            fprintf(stderr, ", but expected ");
+            U32SeqPrint(out);
+            fprintf(stderr, ".\n");
+        }
+    }
+
+    return res;
+}
+
 bool testEntropyEncode() {
     char *source = "The Hitchhiker's Guide to the Galaxy has a few things to say on the subject of towels. A towel, it says, is about the most massively useful thing an interstellar hitch hiker can have.";
     U8Seq sourceSeq = U8Seq_FromArray(
@@ -558,6 +599,57 @@ bool testEntropyEncode() {
     U8Seq_Free(sourceSeq);
     U8Seq_Free(compressed);
     U8Seq_Free(decompressed);
+
+    return true;
+}
+
+bool testFastUniformCompress() {
+    FSeq x = FSeq_New((int32_t) 1e6);
+    FSeq y = FSeq_Empty();
+    U32Seq buf = U32Seq_Empty();
+    U32Seq buf2 = U32Seq_Empty();
+    U32Seq out = U32Seq_Empty();
+
+    uint8_t level = 15;
+    
+    float L = 10;
+    float delta = L / (float)(1 << level);
+
+    rand_State *state = rand_Seed(0, 1);
+
+    FShuffle(x, state);
+    for (int32_t j = 0; j < x.Len; j++)
+        x.Data[j] += 1.5;
+    util_Periodic(x, L);
+    
+    util_UndoPeriodic(x, L);
+    float min, max;
+    util_MinMax(x, &min, &max);
+    buf = util_UniformBinIndex(x, level, min, max - min, buf);
+    out = util_U32UniformPack(buf, level, out);
+
+    buf2 = util_U32UndoUniformPack(out, level, x.Len, buf2);
+
+    y = util_UndoUniformBinIndex(buf2, level, min, max - min, state, y);
+    util_Periodic(y, L);
+
+    free(state);
+
+    util_Periodic(x, L);
+
+
+    FSeq deltas = FSeq_New(x.Len);
+    float deltaSum = 0;
+    for (int32_t i = 0; i < x.Len; i++) {
+        deltas.Data[i] = x.Data[i] - y.Data[i];
+
+        deltaSum += MIN(fabs(deltas.Data[i]), L - fabs(deltas.Data[i]));
+    }
+
+    if (!FSeqAlmostEqual(x, y, delta, 2)) {
+        fprintf(stderr, "in testFastUniformCompress, decompressed values are "
+                "different from original values.\n");
+    }
 
     return true;
 }
@@ -590,6 +682,34 @@ bool U32SeqEqual(U32Seq s1, U32Seq s2) {
     return true;
 }
 
+bool FSeqAlmostEqual(FSeq s1, FSeq s2, float eps, float L) {
+    if (s1.Len != s2.Len) {
+        return false;
+    }
+
+    if (L == 0) {
+        for (int32_t i = 0; i < s1.Len; i++) {
+            if (s1.Data[i] + eps < s2.Data[i] ||
+                s1.Data[i] - eps > s2.Data[i]) {
+                return false;
+            }
+        }
+    } else {
+        for (int32_t i = 0; i < s1.Len; i++) {
+            if ((s1.Data[i] + eps < s2.Data[i] ||
+                 s1.Data[i] - eps > s2.Data[i]) &&
+                (s1.Data[i] + L + eps < s2.Data[i] ||
+                 s1.Data[i] + L - eps > s2.Data[i]) &&
+                (s1.Data[i] - L + eps < s2.Data[i] ||
+                 s1.Data[i] - L - eps > s2.Data[i])) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 void U8SeqPrint(U8Seq s) {
     if (s.Len == 0) {
         fprintf(stderr, "[]");
@@ -619,3 +739,25 @@ void U32SeqPrint(U32Seq s) {
 
     fprintf(stderr, "]");
 }
+
+void FSeqPrint(FSeq s) {
+    if (s.Len == 0) {
+        fprintf(stderr, "[]");
+        return;
+    }
+
+    fprintf(stderr, "[");
+    fprintf(stderr, "%.5g", s.Data[0]);
+    for (int32_t i = 1; i < s.Len; i++) {
+        fprintf(stderr, ", %.5g", s.Data[i]);
+    }
+
+    fprintf(stderr, "]");
+}
+
+void FShuffle(FSeq x, rand_State *s) {
+    for (int32_t i = 0; i < x.Len; i++) {
+        x.Data[i] = rand_Float(s);
+    }
+}
+
