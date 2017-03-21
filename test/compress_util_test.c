@@ -20,6 +20,7 @@ bool testUndoBinIndex();
 bool testUniformBinIndex();
 bool testUndoUniformBinIndex();
 bool testU32UniformPack();
+bool testU32UndoPeriodic();
 bool testEntropyEncode();
 bool testFastUniformCompress();
 
@@ -43,6 +44,7 @@ int main() {
     res = res && testUniformBinIndex();
     res = res && testUndoUniformBinIndex();
     res = res && testU32UniformPack();
+    res = res && testU32UndoPeriodic();
     res = res && testEntropyEncode();
     res = res && testFastUniformCompress();
 
@@ -544,6 +546,37 @@ bool testU32UniformPack() {
     }
 
     free(state);
+
+    return res;
+}
+
+bool testU32UndoPeriodic() {
+    bool res = true;
+
+    struct { uint32_t L, x[8], out[8]; int32_t len; } tests[] = {
+        { 10, {0}, {0}, 0 },
+        { 10, {1}, {1}, 1 },
+        { 10, {9}, {9}, 1 },
+        { 10, {1, 2}, {1, 2}, 2 },
+        { 10, {8, 9}, {8, 9}, 2 },
+        { 10, {1, 9}, {11, 9}, 2},
+        { 10, {9, 1}, {9, 11}, 2},
+        { 10, {0, 1, 2, 3, 4, 5, 6, 7}, {10, 11, 12, 13, 14, 5, 6, 7}, 8}
+    };
+
+    for (int i = 0; i < LEN(tests); i++) {
+        U32Seq x = U32Seq_FromArray(tests[i].x, tests[i].len);
+        U32Seq out = U32Seq_FromArray(tests[i].out, tests[i].len);
+        util_U32UndoPeriodic(x, tests[i].L);
+        
+        if (!U32SeqEqual(x, out)) {
+            fprintf(stderr, "In test %d of testU32UndoPeriodic, got ", i);
+            U32SeqPrint(x);
+            fprintf(stderr, ", but expected ");
+            U32SeqPrint(out);
+            fprintf(stderr, ".\n");
+        }
+    }
 
     return res;
 }
