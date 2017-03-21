@@ -51,7 +51,7 @@ void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
             min = xs[i];
         }
     }
-    
+
     *maxPtr = max;
     *minPtr = min;
 }

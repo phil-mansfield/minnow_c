@@ -446,6 +446,7 @@ void Periodic(algo_Particles p) {
 
 void Logify(algo_Particles p) {
     for (int32_t i = 0; i < p.FVars.Len; i++) {
+        if (!p.FVarsAcc[i].Log) { continue; }
         FSeq var = p.FVars.Data[i];
         for (int32_t j = 0; j < var.Len; j++) {
             var.Data[i] = log10f(var.Data[i]);
@@ -455,6 +456,7 @@ void Logify(algo_Particles p) {
 
 void UndoLogify(algo_Particles p) {
     for (int32_t i = 0; i < p.FVars.Len; i++) {
+        if (!p.FVarsAcc[i].Log) { continue; }
         FSeq var = p.FVars.Data[i];
         for (int32_t j = 0; j < var.Len; j++) {
             var.Data[i] = powf(10, var.Data[i]);
