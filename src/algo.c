@@ -449,7 +449,7 @@ void Logify(algo_Particles p) {
         if (!p.FVarsAcc[i].Log) { continue; }
         FSeq var = p.FVars.Data[i];
         for (int32_t j = 0; j < var.Len; j++) {
-            var.Data[i] = log10f(var.Data[i]);
+            var.Data[j] = log10f(var.Data[j]);
         }
     }
 }
@@ -459,7 +459,7 @@ void UndoLogify(algo_Particles p) {
         if (!p.FVarsAcc[i].Log) { continue; }
         FSeq var = p.FVars.Data[i];
         for (int32_t j = 0; j < var.Len; j++) {
-            var.Data[i] = powf(10, var.Data[i]);
+            var.Data[j] = powf(10, var.Data[j]);
         }
     }
 }
@@ -625,6 +625,8 @@ algo_QuantizedParticles CopyU64s(
 algo_QuantizedRange AccuracyToRange(
     algo_Accuracy acc, float x0, float x1, algo_QuantizedRange buf
 ) {
+    buf.Log = acc.Log;
+
     if (acc.Deltas.Len == 0) {
         uint8_t depth;
         for (depth = 0; depth <= 24; depth++) {
