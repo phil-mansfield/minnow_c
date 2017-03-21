@@ -95,6 +95,13 @@ typedef struct algo_QuantizedVectorRange {
 
 static const algo_QuantizedVectorRange algo_EmptyQuantizedVectorRange;
 
+typedef struct algo_QuantizedIDRange {
+    uint8_t Depth;
+    uint32_t X0[3], X1[3];
+} algo_QuantizedIDRange;
+
+static const algo_QuantizedVectorRange algo_EmptyQuantizedIDRange;
+
 /* algo_QuantizedParticles represents the same information as algo_Particles,
  * but quantized to a grid. It also contains information on the quantization
  * depths and ranges. */
@@ -106,6 +113,7 @@ typedef struct algo_QuantizedParticles {
      * correspond to in cosmological simulations. If this isn't true, the IDs
      * will have been stored as one of the generic U64Vars elements. */
     U32Seq ID[3];
+    algo_QuantizedIDRange IDRange;
     uint32_t IDWidth;
 
     U32SeqSeq FVars;
