@@ -71,6 +71,9 @@ algo_Particles UndoVectorizeIDs(
 algo_Particles UndoCopyU64s(
     algo_QuantizedParticles p, algo_Particles buf
 );
+algo_Particles SetAccuracies(
+    algo_QuantizedParticles p, algo_Particles buf
+);
 algo_Particles UndoQuantize(
     algo_QuantizedParticles p, algo_Particles buf
 );
@@ -107,6 +110,8 @@ algo_Particles algo_UndoQuantize(
     buf = UndoVectorizeIDs(p, buf);
 
     buf = UndoCopyU64s(p, buf);
+
+    buf = SetAccuracies(p, buf);
 
     buf = UndoQuantize(p, buf);
 
@@ -538,7 +543,7 @@ algo_QuantizedParticles SetQuantizedRanges(
 
 	memset(buf.FVarsRange + buf.FVars.Len, 0,
 		   sizeof(*buf.FVarsRange) * (size_t)(p.FVars.Len - buf.FVars.Len));
-	
+
     for (int32_t i = 0; i < p.FVars.Len; i++) {
         if (p.FVars.Data[i].Len == 0) { continue; }
         float min, max;
@@ -686,6 +691,53 @@ algo_Particles UndoVectorizeIDs(
         uint64_t y = p.ID[1].Data[i];
         uint64_t z = p.ID[2].Data[i];
         buf.ID.Data[i] = x + y*w + z*w*w;
+    }
+
+    return buf;
+}
+
+void RangeToAccuracy(
+    uint8_t depth, U8Seq depths, float x0, float x1,
+    float *deltaPtr, FSeq *deltasPtr
+) {
+    if (depths.Len == 0) {
+        *deltaPtr = (x1 - x0) / (float)(1<<depth);
+    } else {
+        FSeq deltas = FSetLen(*deltasPtr, depths.Len);
+        *deltasPtr = deltas;
+        for (int32_t i = 0; i < deltas.Len; i++) {
+            deltas.Data[i] = (x1 - x0) / (float)(1<<depth);
+        }
+    }
+}
+
+algo_Particles SetAccuracies(algo_QuantizedParticles p, algo_Particles buf) {
+    RangeToAccuracy(
+        p.XRange.Depth, p.XRange.Depths,
+        p.XRange.X0[0], p.XRange.X1[0],
+        &buf.XAcc.Delta, &buf.XAcc.Deltas
+    );
+
+    RangeToAccuracy(
+        p.VRange.Depth, p.VRange.Depths,
+        p.VRange.X0[0], p.VRange.X1[0],
+        &buf.VAcc.Delta, &buf.VAcc.Deltas
+    );
+
+    buf.FVarsAcc = realloc(
+        buf.FVarsAcc, sizeof(*buf.FVarsAcc) * (size_t)p.FVars.Len
+    );
+
+	memset(buf.FVarsAcc + buf.FVars.Len, 0,
+		   sizeof(*buf.FVarsAcc) * (size_t)(p.FVars.Len - buf.FVars.Len));
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        buf.FVarsAcc[i].Log = p.FVarsRange[i].Log;
+        RangeToAccuracy(
+            p.FVarsRange[i].Depth, p.FVarsRange[i].Depths,
+            p.FVarsRange[i].X0, p.FVarsRange[i].X1, 
+            &buf.FVarsAcc[i].Delta, &buf.FVarsAcc[i].Deltas
+        );
     }
 
     return buf;
