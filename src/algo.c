@@ -70,6 +70,7 @@ algo_QuantizedParticles algo_Quantize(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
     UndoPeriodic(p);
+
     Logify(p);
 
     buf = VectorizeIDs(p, buf);
@@ -81,6 +82,7 @@ algo_QuantizedParticles algo_Quantize(
     buf = CopyU64s(p, buf);
 
     UndoLogify(p);
+
     Periodic(p);
 	
     return buf;
@@ -90,6 +92,12 @@ algo_Particles algo_UndoQuantize(
     algo_QuantizedParticles p, algo_Particles buf
 ) {
     (void) p;
+    //buf = UndoVectorizeIDs()
+
+    //UndoLogify(buf);
+
+    //Periodic(buf);
+
     return buf;
 }
 
@@ -538,6 +546,11 @@ algo_QuantizedParticles VectorizeIDs(
         buf.ID[0].Data[i] = (uint32_t) (id % w);
         buf.ID[1].Data[i] = (uint32_t) ((id / w) % w);
         buf.ID[2].Data[i] = (uint32_t) (id / (w*w));
+    }
+
+    for (int i = 0; i < 3; i++) {
+        util_U32UndoPeriodic(buf.ID[i], buf.IDWidth);
+        util_U32MinMax(buf.ID[i], &buf.IDRange.X0[i], &buf.IDRange.X1[i]);
     }
 
     return buf;
