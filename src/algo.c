@@ -767,7 +767,7 @@ algo_Particles UndoCopyU64s(
 algo_Particles UndoQuantize(
     algo_QuantizedParticles p, algo_Particles buf
 ) {
-    rand_State *s = rand_Seed(clock(), 1);
+    rand_State *s = rand_Seed((uint64_t)clock(), 1);
 
     buf.XWidth = p.XWidth;
 

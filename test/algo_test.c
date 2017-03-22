@@ -451,7 +451,7 @@ bool testIDRange() {
 }
 
 FSeq FSeqRandom(float x0, float x1, int32_t n) {
-    rand_State *state = rand_Seed(clock(), 1);
+    rand_State *state = rand_Seed((uint64_t)clock(), 1);
 
     FSeq s = FSeq_New(n);
     for (int32_t i = 0; i < n; i++) {
@@ -464,7 +464,7 @@ FSeq FSeqRandom(float x0, float x1, int32_t n) {
 }
 
 U64Seq U64SeqRandom(uint64_t x0, uint64_t x1, int32_t n) {
-    rand_State *state = rand_Seed(clock(), 1);
+    rand_State *state = rand_Seed((uint64_t)clock(), 1);
 
     U64Seq s = U64Seq_New(n);
     for (int32_t i = 0; i < n; i++) {
