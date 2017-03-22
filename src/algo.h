@@ -108,6 +108,7 @@ static const algo_QuantizedVectorRange algo_EmptyQuantizedIDRange;
 typedef struct algo_QuantizedParticles {
     U32Seq X[3], V[3];
     algo_QuantizedVectorRange XRange, VRange;
+    float XWidth;
 
     /* Here, ID is represented as a 3-vector, which is generally what IDs
      * correspond to in cosmological simulations. If this isn't true, the IDs

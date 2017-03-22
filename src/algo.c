@@ -595,6 +595,8 @@ algo_QuantizedParticles VectorizeIDs(
 algo_QuantizedParticles Quantize(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
+    buf.XWidth = p.XWidth;
+
     for (int i = 0; i < 3; i++) {
         float x0 = buf.XRange.X0[i];
         float dx = buf.XRange.X1[i] - buf.XRange.X0[i];
@@ -766,6 +768,8 @@ algo_Particles UndoQuantize(
     algo_QuantizedParticles p, algo_Particles buf
 ) {
     rand_State *s = rand_Seed(clock(), 1);
+
+    buf.XWidth = p.XWidth;
 
     for (int i = 0; i < 3; i++) {
         float x0 = p.XRange.X0[i];
