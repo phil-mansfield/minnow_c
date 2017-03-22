@@ -466,9 +466,11 @@ FSeq FSeqRandom(float x0, float x1, int32_t n) {
 U64Seq U64SeqRandom(uint64_t x0, uint64_t x1, int32_t n) {
     rand_State *state = rand_Seed((uint64_t)clock(), 1);
 
+	printf("%"PRIu64" %"PRIu64"\n", (*state)[0], (*state)[1]);
+	
     U64Seq s = U64Seq_New(n);
     for (int32_t i = 0; i < n; i++) {
-        s.Data[i] = x0 + rand_Uint63Lim(state, (x1 - x0));
+	      s.Data[i] = x0 + rand_Uint63Lim(state, (x1 - x0));
     }
 
     free(state);
@@ -549,8 +551,10 @@ bool testUniformQuantize() {
 
     p.IDWidth = 256;
     U64Seq x = U64SeqRandom(0, 10, n);
-    U64Seq y = U64SeqRandom(0, p.IDWidth, n);
-    U64Seq z = U64SeqRandom(p.IDWidth + 10, p.IDWidth + 10, n);
+	U64Seq y = U64SeqRandom(0, 10, n);
+    //U64Seq z = U64SeqRandom(0, 10, n);
+    //U64Seq y = U64SeqRandom(0, p.IDWidth, n);
+    U64Seq z = U64SeqRandom(p.IDWidth - 10, p.IDWidth + 10, n);
     p.ID = U64Seq_New(n);
     for (int32_t i = 0; i < n; i++) {
         if (z.Data[i] > p.IDWidth) { z.Data[i] -= p.IDWidth; }
@@ -569,6 +573,8 @@ bool testUniformQuantize() {
     p.FVarsAcc[2].Delta = (float) 1e-2;
     p.FVars.Data[2] = FSeqRandom(-100, 100, n);
 
+    U64SeqPrint(p.ID);
+	
     /* Call library functions. */
     q = algo_Quantize(p, q);
     pOut = algo_UndoQuantize(q, pOut);
