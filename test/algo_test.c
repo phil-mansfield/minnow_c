@@ -1,9 +1,13 @@
 #include "algo.h"
 #include "seq.h"
+#include "rand.h"
+#include "compress_util.h"
+
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <time.h>
 
 #define LEN(x) ((int)(sizeof(x) / sizeof(x[0])))
 
@@ -88,9 +92,11 @@ bool testFVarRange();
 bool testVRange();
 bool testXRange();
 bool testIDRange();
+bool testUniformQuantize();
 
 bool testSetQuantizedRanges() {
-    return testFVarRange() && testVRange() && testXRange() && testIDRange();
+    return testFVarRange() && testVRange() && testXRange() && testIDRange() &&
+        testUniformQuantize();
 }
 
 
@@ -439,5 +445,81 @@ bool testXRange() {
 
 bool testIDRange() {
     bool res = true;
+    return res;
+}
+
+FSeq FSeqRandom(float x0, float x1, int32_t n) {
+    rand_State *state = rand_Seed(clock(), 1);
+
+    FSeq s = FSeq_New(n);
+    for (int32_t i = 0; i < n; i++) {
+        s.Data[i] = rand_Float(state)*(x1 - x0) + x0;
+    }
+
+    free(state);
+
+    return s;
+}
+
+U64Seq U64SeqRandom(uint64_t x0, uint64_t x1, int32_t n) {
+    rand_State *state = rand_Seed(clock(), 1);
+
+    U64Seq s = U64Seq_New(n);
+    for (int32_t i = 0; i < n; i++) {
+        s.Data[i] = x0 + rand_Uint63Lim(state, (x1 - x0));
+    }
+
+    free(state);
+
+    return s;
+}
+
+bool testUniformQuantize() {
+    bool res = true;
+
+    int32_t n = (int32_t) 1e4;
+
+    algo_Particles p, pOut;
+    algo_QuantizedParticles q;
+
+    /* Initialize */
+    memset(&p, 0, sizeof(p));
+    memset(&pOut, 0, sizeof(pOut));
+    memset(&q, 0, sizeof(q));
+
+    p.XWidth = 10;
+    p.XAcc.Delta = (float) 1e-3;
+
+    p.X[0] = FSeqRandom(0, 3, n);
+    p.X[1] = FSeqRandom(9, 12, n);
+    util_Periodic(p.X[1], p.XWidth);
+    p.X[2] = FSeqRandom(0, 10, n);
+
+    p.VAcc.Delta = 0.5;
+
+    p.V[0] = FSeqRandom(-100, -80, n);
+    p.V[1] = FSeqRandom(-50, 50, n);
+    p.V[2] = FSeqRandom(0, 1, n);
+
+    p.IDWidth = (uint32_t)1e3;
+    p.ID = U64SeqRandom(0, p.IDWidth*p.IDWidth*p.IDWidth, n);
+
+    p.U64Vars = U64SeqSeq_New(4);
+    p.U64Vars.Data[1] = U64SeqRandom(100, 200, n);
+
+    p.FVars = FSeqSeq_New(3);
+    p.FVarsAcc = calloc(3, sizeof(p.FVarsAcc[0]));
+    p.FVarsAcc[2].Delta = (float) 1e-2;
+    p.FVars.Data[2] = FSeqRandom(-100, 100, n);
+
+    /* Call library functions. */
+    q = algo_Quantize(p, q);
+    pOut = algo_UndoQuantize(q, pOut);
+
+    /* Free memory */
+    Particles_Free(p);
+    QuantizedParticles_Free(q);
+    Particles_Free(pOut);
+
     return res;
 }
