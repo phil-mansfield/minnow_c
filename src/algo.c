@@ -4,6 +4,7 @@
 #include <float.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include "algo.h"
 #include "debug.h"
@@ -28,6 +29,7 @@ U8Seq U8SetLen(U8Seq s, int32_t len);
 U32Seq U32SetLen(U32Seq s, int32_t len);
 U64Seq U64SetLen(U64Seq s, int32_t len);
 U64SeqSeq U64SeqSeqSetLen(U64SeqSeq s, int32_t len);
+FSeqSeq FSeqSeqSetLen(FSeqSeq s, int32_t len);
 FSeq FSetLen(FSeq s, int32_t len);
 
 /* Functions that convert algo_Accuracy structs to algo_*Range structs. */
@@ -62,6 +64,17 @@ algo_QuantizedParticles CopyU64s(
     algo_Particles p, algo_QuantizedParticles buf
 );
 
+/* algo_UndoQuantize subprocedures */
+algo_Particles UndoVectorizeIDs(
+    algo_QuantizedParticles p, algo_Particles buf
+);
+algo_Particles UndoCopyU64s(
+    algo_QuantizedParticles p, algo_Particles buf
+);
+algo_Particles UndoQuantize(
+    algo_QuantizedParticles p, algo_Particles buf
+);
+
 /**********************/
 /* Exported Functions */
 /**********************/
@@ -91,12 +104,15 @@ algo_QuantizedParticles algo_Quantize(
 algo_Particles algo_UndoQuantize(
     algo_QuantizedParticles p, algo_Particles buf
 ) {
-    (void) p;
-    //buf = UndoVectorizeIDs()
+    buf = UndoVectorizeIDs(p, buf);
 
-    //UndoLogify(buf);
+    buf = UndoCopyU64s(p, buf);
 
-    //Periodic(buf);
+    buf = UndoQuantize(p, buf);
+
+    UndoLogify(buf);
+
+    Periodic(buf);
 
     return buf;
 }
@@ -433,6 +449,17 @@ U64SeqSeq U64SeqSeqSetLen(U64SeqSeq s, int32_t len) {
     return s;
 }
 
+FSeqSeq FSeqSeqSetLen(FSeqSeq s, int32_t len) {
+    int32_t initialSize = s.Len;
+    s = FSeqSeq_Extend(s, len);
+    s = FSeqSeq_Sub(s, 0, len);
+    if (initialSize < s.Len) {
+        memset(s.Data + initialSize, 0,
+               (size_t)(s.Len - initialSize) * sizeof(*s.Data));
+    }
+    return s;
+}
+
 FSeq FSetLen(FSeq s, int32_t len) {
     s = FSeq_Extend(s, len);
     s = FSeq_Sub(s, 0, len);
@@ -551,6 +578,9 @@ algo_QuantizedParticles VectorizeIDs(
     for (int i = 0; i < 3; i++) {
         util_U32UndoPeriodic(buf.ID[i], buf.IDWidth);
         util_U32MinMax(buf.ID[i], &buf.IDRange.X0[i], &buf.IDRange.X1[i]);
+        for (int32_t j = 0; j < buf.ID[i].Len; j++) {
+            buf.ID[i].Data[j] -= buf.IDRange.X0[i];
+        }
     }
 
     return buf;
@@ -628,6 +658,115 @@ algo_QuantizedParticles CopyU64s(
 
         memcpy(dst.Data, src.Data, sizeof(dst.Data[0]) * (size_t)dst.Len);
     }
+
+    return buf;
+}
+
+algo_Particles UndoVectorizeIDs(
+    algo_QuantizedParticles p, algo_Particles buf
+) {
+    if (p.ID[0].Len == 0) {
+        buf.ID = U64Seq_Sub(buf.ID, 0, 0);
+        return buf;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        for (int32_t j = 0; j < p.ID[i].Len; j++) {
+            p.ID[i].Data[j] += p.IDRange.X0[i];
+        }
+        util_U32Periodic(p.ID[i], p.IDWidth);
+    }
+
+    buf.ID = U64SetLen(buf.ID, p.ID[0].Len);
+    buf.IDWidth = p.IDWidth;
+
+    uint64_t w = (uint64_t)p.IDWidth;
+    for (int32_t i = 0; i < buf.ID.Len; i++) {
+        uint64_t x = p.ID[0].Data[i];
+        uint64_t y = p.ID[1].Data[i];
+        uint64_t z = p.ID[2].Data[i];
+        buf.ID.Data[i] = x + y*w + z*w*w;
+    }
+
+    return buf;
+}
+
+algo_Particles UndoCopyU64s(
+    algo_QuantizedParticles p, algo_Particles buf
+) {
+    /* hmmmmm */
+
+    buf.U64Vars = U64SeqSeqSetLen(buf.U64Vars, p.U64Vars.Len);
+    for (int32_t i = 0; i < p.U64Vars.Len; i++) {
+        U64Seq src = p.U64Vars.Data[i];
+        U64Seq dst = buf.U64Vars.Data[i];
+
+        dst = U64SetLen(dst, src.Len);
+        buf.U64Vars.Data[i] = dst;
+
+        memcpy(dst.Data, src.Data, sizeof(dst.Data[0]) * (size_t)dst.Len);
+    }
+
+    return buf;
+}
+
+algo_Particles UndoQuantize(
+    algo_QuantizedParticles p, algo_Particles buf
+) {
+    rand_State *s = rand_Seed(clock(), 1);
+
+    for (int i = 0; i < 3; i++) {
+        float x0 = p.XRange.X0[i];
+        float dx = p.XRange.X1[i] - p.XRange.X0[i];
+
+        if (p.XRange.Depths.Len == 0) {
+            buf.X[i] = util_UndoUniformBinIndex(
+                p.X[i], p.XRange.Depth, x0, dx, s, buf.X[i]
+            );
+        } else {
+            buf.X[i] = util_UndoBinIndex(
+                p.X[i], p.XRange.Depths, x0, dx, s, buf.X[i]
+            );
+        }
+    }
+
+    if (p.V[0].Len != 0) {
+        for (int i = 0; i < 3; i++) {
+            float v0 = p.VRange.X0[i];
+            float dv = p.VRange.X1[i] - p.VRange.X0[i];
+
+            if (p.XRange.Depths.Len == 0) {
+                buf.V[i] = util_UndoUniformBinIndex(
+                    p.V[i], p.VRange.Depth, v0, dv, s, buf.V[i]
+                );
+            } else {
+                buf.V[i] = util_UndoBinIndex(
+                    p.V[i], p.VRange.Depths, v0, dv, s, buf.V[i]
+                );
+            }
+        }
+    }
+
+    buf.FVars = FSeqSeqSetLen(buf.FVars, p.FVars.Len);
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        U32Seq var = p.FVars.Data[i];
+        if (var.Len == 0) { continue; }
+		
+        float f0 = p.FVarsRange[i].X0;
+        float df = p.FVarsRange[i].X1 - p.FVarsRange[i].X0;
+        if (p.FVarsRange[i].Depths.Len == 0) {
+            buf.FVars.Data[i] = util_UndoUniformBinIndex(
+                var, p.FVarsRange[i].Depth, f0, df, s, buf.FVars.Data[i]
+            );
+        } else {
+            buf.FVars.Data[i] = util_UndoBinIndex(
+                var, p.FVarsRange[i].Depths, f0, df, s, buf.FVars.Data[i]
+            );
+        }
+    }
+
+    free(s);
 
     return buf;
 }
