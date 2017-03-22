@@ -14,6 +14,8 @@
 bool testCheckParticles();
 bool testSetQuantizedRanges();
 bool almostEqual(float x, float y, float eps);
+void FSeqPrint(FSeq x);
+void U64SeqPrint(U64Seq x);
 
 int main() {
     bool res = true;
@@ -474,10 +476,54 @@ U64Seq U64SeqRandom(uint64_t x0, uint64_t x1, int32_t n) {
     return s;
 }
 
+bool U64SeqEqual(U64Seq x, U64Seq y) {
+    if (x.Len != y.Len) {
+        return false;
+    }
+
+    for (int32_t i = 0; i < x.Len; i++) {
+        if (x.Data[i] != y.Data[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool FSeqDeltaEqual(FSeq x, FSeq y, float delta, FSeq deltas) {
+    if (deltas.Len == 0) {
+
+        if (x.Len != y.Len) { return false; }
+
+        for (int32_t i = 0; i < x.Len; i++) {
+            if (x.Data[i] + delta < y.Data[i] ||
+                y.Data[i] - delta > y.Data[i]) {
+                return false;
+            }
+        }
+
+        return true;
+
+    } else {
+
+        if (x.Len != y.Len) { return false; }
+
+        for (int32_t i = 0; i < x.Len; i++) {
+            if (x.Data[i] + deltas.Data[i] < y.Data[i] ||
+                y.Data[i] - deltas.Data[i] > y.Data[i]) {
+                return false;
+            }
+        }
+
+        return true;
+        
+    }
+}
+
 bool testUniformQuantize() {
     bool res = true;
 
-    int32_t n = (int32_t) 1e4;
+    int32_t n = (int32_t) 10;
 
     algo_Particles p, pOut;
     algo_QuantizedParticles q;
@@ -501,8 +547,19 @@ bool testUniformQuantize() {
     p.V[1] = FSeqRandom(-50, 50, n);
     p.V[2] = FSeqRandom(0, 1, n);
 
-    p.IDWidth = (uint32_t)1e3;
-    p.ID = U64SeqRandom(0, p.IDWidth*p.IDWidth*p.IDWidth, n);
+    p.IDWidth = 256;
+    U64Seq x = U64SeqRandom(0, 10, n);
+    U64Seq y = U64SeqRandom(0, p.IDWidth, n);
+    U64Seq z = U64SeqRandom(p.IDWidth + 10, p.IDWidth + 10, n);
+    p.ID = U64Seq_New(n);
+    for (int32_t i = 0; i < n; i++) {
+        if (z.Data[i] > p.IDWidth) { z.Data[i] -= p.IDWidth; }
+        p.ID.Data[i] = x.Data[i] + y.Data[i]*p.IDWidth +
+            z.Data[i]*p.IDWidth*p.IDWidth;
+    }
+    U64Seq_Free(x);
+    U64Seq_Free(y);
+    U64Seq_Free(z);
 
     p.U64Vars = U64SeqSeq_New(4);
     p.U64Vars.Data[1] = U64SeqRandom(100, 200, n);
@@ -516,10 +573,89 @@ bool testUniformQuantize() {
     q = algo_Quantize(p, q);
     pOut = algo_UndoQuantize(q, pOut);
 
+    /* Check that new accuracies are okay. */
+    if (pOut.XAcc.Delta > p.XAcc.Delta || 2*pOut.XAcc.Delta < p.XAcc.Delta) {
+        res = false;
+        fprintf(stderr, "Original X delta = %g, but final X delta = %g.\n",
+                pOut.XAcc.Delta, p.XAcc.Delta);
+    }
+    if (pOut.VAcc.Delta > p.VAcc.Delta || 2*pOut.VAcc.Delta < p.VAcc.Delta) {
+        res = false;
+        fprintf(stderr, "Original V delta = %g, but final V delta = %g.\n",
+                pOut.VAcc.Delta, p.VAcc.Delta);
+    }
+    if (pOut.FVarsAcc[2].Delta > p.FVarsAcc[2].Delta ||
+        2*pOut.FVarsAcc[2].Delta < p.FVarsAcc[2].Delta) {
+        res = false;
+        fprintf(stderr, "Original FVar[2] delta = %g, but final "
+                "FVar[2] delta = %g.\n", pOut.FVarsAcc[2].Delta,
+                p.FVarsAcc[2].Delta);
+    }
+
+    /* Check that new values are consistent with reported accuracies. */
+    for (int i = 0; i < 3; i++) {
+        if (!FSeqDeltaEqual(p.X[i], pOut.X[i], pOut.XAcc.Delta,
+                            pOut.XAcc.Deltas)) {
+            res = false;
+            fprintf(stderr, "X[%d] does not obey delta.\n", i);
+        }
+        if (!FSeqDeltaEqual(p.V[i], pOut.V[i], pOut.VAcc.Delta,
+                            pOut.VAcc.Deltas)) {
+            res = false;
+            fprintf(stderr, "V[%d] does not obey delta.\n", i);
+        }
+    }
+
+    for (int32_t i = 0; i < p.FVars.Len; i++) {
+        if (!FSeqDeltaEqual(p.FVars.Data[i], pOut.FVars.Data[i],
+                            pOut.FVarsAcc[i].Delta, pOut.FVarsAcc[i].Deltas)) {
+            res = false;
+            fprintf(stderr, "FVar[%"PRId32"] does not obey delta.\n", i);
+        }
+    }
+
+    U64SeqPrint(p.ID);
+    U64SeqPrint(pOut.ID);
+    if (!U64SeqEqual(p.ID, pOut.ID)) {
+        res = false;
+        fprintf(stderr, "ID changes after quantization.\n");
+    }
+
+    for (int32_t i = 0; i < p.U64Vars.Len; i++){
+        if(!U64SeqEqual(p.U64Vars.Data[i], pOut.U64Vars.Data[i])) {
+            res = false;
+            fprintf(stderr, "U64Var[%"PRId32"] changes after "
+                    "quantization.\n", i);
+        }
+    }
+
     /* Free memory */
     Particles_Free(p);
     QuantizedParticles_Free(q);
     Particles_Free(pOut);
 
     return res;
+}
+
+
+void FSeqPrint(FSeq x) {
+    fprintf(stderr, "[");
+    if (x.Len > 0) {
+        fprintf(stderr, "%g", x.Data[0]);
+    }
+    for (int32_t i = 1; i < x.Len; i++) {
+        fprintf(stderr, ", %g", x.Data[i]);
+    }
+    fprintf(stderr, "]\n");
+}
+
+void U64SeqPrint(U64Seq x) {
+    fprintf(stderr, "[");
+    if (x.Len > 0) {
+        fprintf(stderr, "%"PRIx64"", x.Data[0]);
+    }
+    for (int32_t i = 1; i < x.Len; i++) {
+        fprintf(stderr, ", %"PRIx64"", x.Data[i]);
+    }
+    fprintf(stderr, "]\n");
 }
