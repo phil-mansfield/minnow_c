@@ -3,6 +3,7 @@
 #include "lz4.h"
 #include <inttypes.h>
 #include <math.h>
+#include <float.h>
 
 /************************/
 /* Forward Declarations */
@@ -17,39 +18,21 @@ FSeq FSeqSetLen(FSeq buf, int32_t len);
 /* Exported Functions */
 /**********************/
 
-void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
+void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {    
     int32_t n = x.Len;
     float *xs = x.Data;
 
     DebugAssert(n > 0) {
         Panic("Empty sequence given to util_MinMax.%s", "");
     }
-
-    /* This is a hot inner loop for some algorithms. */
-
-    float min, max;
-    int32_t i;
-    if ((n & 1) == 1) {
-        min = xs[0];
-        max = xs[0];
-        i = 1;
-    } else {
-        if (xs[0] > xs[1]) {
-            min = xs[1];
-            max = xs[0];
-        } else {
-            min = xs[0];
-            max = xs[1];
-        }
-        i = 2;
-    }
-
-    for (; i < n; i++) {
-        if (xs[i] > max) {
-            max = xs[i];
-        } else if (xs[i] < min) {
-            min = xs[i];
-        }
+ 
+    float min = xs[0];
+    float max = xs[0];
+    for (int32_t i = 1; i < n; i++) {
+        /* not using else if allows these to be converted into maxss and
+         * maxps instructions. */
+        if (xs[i] > max) { max = xs[i]; }
+        if (xs[i] < min) { min = xs[i]; }
     }
 
     *maxPtr = max;
@@ -64,33 +47,16 @@ void util_U32MinMax(U32Seq x, uint32_t *minPtr, uint32_t *maxPtr) {
         Panic("Empty sequence given to util_MinMax.%s", "");
     }
 
-    /* This is a hot inner loop for some algorithms. */
+    uint32_t min = xs[0];
+    uint32_t max = xs[0];
 
-    uint32_t min, max;
-    int32_t i;
-    if ((n & 1) == 1) {
-        min = xs[0];
-        max = xs[0];
-        i = 1;
-    } else {
-        if (xs[0] > xs[1]) {
-            min = xs[1];
-            max = xs[0];
-        } else {
-            min = xs[0];
-            max = xs[1];
-        }
-        i = 2;
+    for (int32_t i = 1; i < n; i++) {
+        /* not using else if allows these to be converted into maxss and
+         * maxps instructions. */
+        if (xs[i] > max) { max = xs[i]; }
+        if (xs[i] < min) { min = xs[i]; }
     }
 
-    for (; i < n; i++) {
-        if (xs[i] > max) {
-            max = xs[i];
-        } else if (xs[i] < min) {
-            min = xs[i];
-        }
-    }
-    
     *maxPtr = max;
     *minPtr = min;
 }
@@ -142,30 +108,32 @@ void util_UndoPeriodic(FSeq x, float L) {
 }
 
 void util_U32UndoPeriodic(U32Seq x, uint32_t L) {
-    DebugAssert(UINT32_MAX/2 > L) {
+    DebugAssert(INT32_MAX/2 > L) {
         Panic("L range of %"PRIu32" not supported by util_U32UndoPeriodic.", L);
     }
 
     if (x.Len == 0) { return; }
 
     int32_t n = x.Len;
-    uint32_t *xs = x.Data;
+    int32_t *xs = (int32_t*)x.Data;
+    int32_t x0 = xs[0];
+    int32_t iL = (int32_t) L;
 
-    for (int32_t i = 0; i < n; i++) { xs[i] += L; }
-
-    uint32_t x0 = xs[0];
-    uint32_t min = x0;
-    for (int32_t i = 0; i < n; i++) {
-        if (xs[i] >= L/2 + x0) {
+    for (int32_t i = 1; i < n; i++) {
+        if (xs[i] - x0 >= iL/2) {
             xs[i] -= L;
-            if (xs[i] < min) { min = xs[i]; }
-        } else if (xs[i] < x0 - L + L/2) {
+        } else if (xs[i] - x0  < -iL/2) {
             xs[i] += L;
         }
     }
 
-    if (min >= L) {
-        for (int32_t i = 0; i < n; i++) { xs[i] -= L; }
+    int32_t min = x0;
+    for (int32_t i = 1; i < n; i++) {
+        if (xs[i] < min) { min = xs[i]; }
+    }
+
+    if (min < 0) {
+        for (int32_t i = 0; i < n; i++) { xs[i] += iL; }
     }
 }
 

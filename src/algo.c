@@ -527,16 +527,6 @@ algo_QuantizedParticles SetQuantizedRanges(
         buf.VRange = AccuracyToVectorRange(p.VAcc, vMin, vMax, buf.VRange);
     }
 
-
-    if (buf.ID[0].Len > 0) {
-        uint32_t IDMin, IDMax;
-        for (int i = 0; i < 3; i++) {
-            util_U32MinMax(buf.ID[i], &IDMin, &IDMax);
-            buf.IDRange.X0[i] = IDMin;
-            buf.IDRange.X1[i] = IDMax;
-        }
-    }
-
     buf.FVarsRange = realloc(
         buf.FVarsRange, sizeof(*buf.FVarsRange) * (size_t)p.FVars.Len
     );

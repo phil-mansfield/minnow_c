@@ -314,8 +314,9 @@ void U32Shuffle(U32Seq x, uint32_t lim) {
 }
 
 int main() {
+    
+    Benchmark_Run("util_MinMax, 100 MB", &MinMaxTrial_100MB, (uint64_t) 100e6);
     /*
-    Benchmark_Run("util_MinMax, 100 MB", &MinMaxTrial_100MB, (uint64_t) 1e8);
     Benchmark_Run("util_Periodic (in bounds), 100 MB",
                   &PeriodicTrial_InBounds_100MB, (uint64_t) 1e8);
     Benchmark_Run("util_Periodic (off center), 100 MB",
@@ -337,6 +338,7 @@ int main() {
     Benchmark_Run("util_UndoUniformPack (unaligned), 100 MB",
                   &UndoUniformPackTrial_Unaligned_100MB, (uint64_t) 1e8);
     */
+
     Benchmark_Run("(mock) fast compress, 100 MB",
                   &FastCompressTrial_100MB, (uint64_t) 1e8);
     Benchmark_Run("(mock) undo fast compress, 100 MB",

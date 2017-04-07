@@ -3,6 +3,7 @@
 #include "rand.h"
 #include "compress_util.h"
 
+#include <assert.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -16,6 +17,7 @@ bool testSetQuantizedRanges();
 bool almostEqual(float x, float y, float eps);
 void FSeqPrint(FSeq x);
 void U64SeqPrint(U64Seq x);
+void U32SeqPrint(U32Seq x);
 
 int main() {
     bool res = true;
@@ -465,8 +467,6 @@ FSeq FSeqRandom(float x0, float x1, int32_t n) {
 
 U64Seq U64SeqRandom(uint64_t x0, uint64_t x1, int32_t n) {
     rand_State *state = rand_Seed((uint64_t)clock(), 1);
-
-	printf("%"PRIu64" %"PRIu64"\n", (*state)[0], (*state)[1]);
 	
     U64Seq s = U64Seq_New(n);
     for (int32_t i = 0; i < n; i++) {
@@ -549,11 +549,9 @@ bool testUniformQuantize() {
     p.V[1] = FSeqRandom(-50, 50, n);
     p.V[2] = FSeqRandom(0, 1, n);
 
-    p.IDWidth = 256;
-    U64Seq x = U64SeqRandom(0, 10, n);
-	U64Seq y = U64SeqRandom(0, 10, n);
-    //U64Seq z = U64SeqRandom(0, 10, n);
-    //U64Seq y = U64SeqRandom(0, p.IDWidth, n);
+    p.IDWidth = 257;
+    U64Seq x = U64SeqRandom(1, 10, n);
+    U64Seq y = U64SeqRandom(0, p.IDWidth, n);
     U64Seq z = U64SeqRandom(p.IDWidth - 10, p.IDWidth + 10, n);
     p.ID = U64Seq_New(n);
     for (int32_t i = 0; i < n; i++) {
@@ -561,6 +559,7 @@ bool testUniformQuantize() {
         p.ID.Data[i] = x.Data[i] + y.Data[i]*p.IDWidth +
             z.Data[i]*p.IDWidth*p.IDWidth;
     }
+
     U64Seq_Free(x);
     U64Seq_Free(y);
     U64Seq_Free(z);
@@ -572,8 +571,6 @@ bool testUniformQuantize() {
     p.FVarsAcc = calloc(3, sizeof(p.FVarsAcc[0]));
     p.FVarsAcc[2].Delta = (float) 1e-2;
     p.FVars.Data[2] = FSeqRandom(-100, 100, n);
-
-    U64SeqPrint(p.ID);
 	
     /* Call library functions. */
     q = algo_Quantize(p, q);
@@ -620,8 +617,6 @@ bool testUniformQuantize() {
         }
     }
 
-    U64SeqPrint(p.ID);
-    U64SeqPrint(pOut.ID);
     if (!U64SeqEqual(p.ID, pOut.ID)) {
         res = false;
         fprintf(stderr, "ID changes after quantization.\n");
@@ -658,10 +653,21 @@ void FSeqPrint(FSeq x) {
 void U64SeqPrint(U64Seq x) {
     fprintf(stderr, "[");
     if (x.Len > 0) {
-        fprintf(stderr, "%"PRIx64"", x.Data[0]);
+        fprintf(stderr, "%06"PRIx64"", x.Data[0]);
     }
     for (int32_t i = 1; i < x.Len; i++) {
-        fprintf(stderr, ", %"PRIx64"", x.Data[i]);
+        fprintf(stderr, ", %06"PRIx64"", x.Data[i]);
+    }
+    fprintf(stderr, "]\n");
+}
+
+void U32SeqPrint(U32Seq x) {
+    fprintf(stderr, "[");
+    if (x.Len > 0) {
+        fprintf(stderr, "%02"PRIx32"", x.Data[0]);
+    }
+    for (int32_t i = 1; i < x.Len; i++) {
+        fprintf(stderr, ", %02"PRIx32"", x.Data[i]);
     }
     fprintf(stderr, "]\n");
 }
