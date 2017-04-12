@@ -28,6 +28,7 @@ void U32CheckVectorValues(
 U8Seq U8SetLen(U8Seq s, int32_t len);
 U32Seq U32SetLen(U32Seq s, int32_t len);
 U64Seq U64SetLen(U64Seq s, int32_t len);
+U8SeqSeq U8SeqSeqSetLen(U8SeqSeq s, int32_t len);
 U64SeqSeq U64SeqSeqSetLen(U64SeqSeq s, int32_t len);
 FSeqSeq FSeqSeqSetLen(FSeqSeq s, int32_t len);
 FSeq FSetLen(FSeq s, int32_t len);
@@ -171,6 +172,76 @@ void CompressedParticles_Free(algo_CompressedParticles p) {
         U8Seq_Free(p.Blocks.Data[i]);
     }
     U8SeqSeq_Free(p.Blocks);
+}
+
+typedef struct {
+    int32_t BlockNum, ParticleNum;
+    int32_t HasV, HasID, FVarsLen, U64VarsLen;
+} SegmentHeader;
+
+U8BigSeq CompressedParticles_ToBytes(
+    algo_CompressedParticles p, U8BigSeq buf
+) {
+    int64_t headerSize = sizeof(SegmentHeader);
+    int64_t lenSize = (int64_t) sizeof(p.Blocks.Data[0].Len) * p.Blocks.Len;
+    int64_t dataSize = 0;
+    for (int32_t i = 0; i < p.Blocks.Len; i++) {
+        dataSize += (int64_t) p.Blocks.Data[i].Len;
+    }
+
+    buf = U8BigSeq_Extend(buf, headerSize + lenSize + dataSize);
+    buf = U8BigSeq_Sub(buf, 0, headerSize + lenSize + dataSize);
+
+    uint8_t *headerPtr = buf.Data;
+    uint8_t *lenPtr = buf.Data + headerSize;
+    uint8_t *dataPtr = buf.Data + headerSize + lenSize;
+
+    SegmentHeader hd = {
+        .BlockNum = p.Blocks.Len, .ParticleNum = p.ParticleNum,
+        .HasV = (int32_t) p.HasV, .HasID = (int32_t) p.HasID,
+        .FVarsLen = p.FVarsLen, .U64VarsLen = p.FVarsLen
+    };
+
+    memcpy(headerPtr, &hd, headerSize);
+
+    for (int32_t i = 0; i < p.Blocks.Len; i++) {
+        U8Seq block = p.Blocks.Data[i];
+        memcpy(lenPtr, &p.Blocks.Data[i].Len, sizeof(block.Len));
+        memcpy(dataPtr, p.Blocks.Data[i].Data, p.Blocks.Data[i].Len);
+        lenPtr += sizeof(block.Len);
+        dataPtr += p.Blocks.Len;
+    }
+
+    return buf;
+}
+
+algo_CompressedParticles CompressedParticles_FromBytes(
+    U8BigSeq bytes, algo_CompressedParticles buf
+) {
+    int64_t headerSize = sizeof(SegmentHeader);
+    SegmentHeader hd;
+    memcpy(&hd, bytes.Data, headerSize);
+    int64_t lenSize = (int64_t) sizeof(buf.Blocks.Data[0].Len) * hd.BlockNum;
+
+    uint8_t *lenPtr = bytes.Data + headerSize;
+    uint8_t *dataPtr = bytes.Data + headerSize + lenSize;
+
+    buf.Blocks = U8SeqSeqSetLen(buf.Blocks, hd.BlockNum);
+    buf.Blocks = U8SeqSeq_Sub(buf.Blocks, 0, hd.BlockNum);
+    int32_t blockLenSize = sizeof(buf.Blocks.Data[0].Len);
+    for (int32_t i = 0; i < buf.Blocks.Len; i++) {
+        int32_t len;
+        memcpy(&len, lenPtr, blockLenSize);
+
+        buf.Blocks.Data[i] = U8SetLen(buf.Blocks.Data[i], len);
+        buf.Blocks.Data[i] = U8Seq_Sub(buf.Blocks.Data[i], 0, len);
+        memcpy(buf.Blocks.Data[i].Data, dataPtr, len);
+
+        lenPtr += blockLenSize;
+        dataPtr += len;
+    }
+
+    return buf;
 }
 
 void QuantizedParticles_Check(algo_QuantizedParticles p) {
@@ -411,6 +482,13 @@ void U32CheckVectorValues(
     }
 }
 
+/* The *SetLen functions are the correct way to set the length of a buffer to
+ * some value which is potentially larger than its cap size. The scalar
+ * sequences clear the buffer, and the nested sequences do something slightly
+ * more complicated to make sure memory isn't leaked or unneccessarily
+ * reallocated. The idea is that you would SetLen the nested sequence and then
+ * SetLen all the elements. As long as you do that, nothing bad happens. */
+
 U8Seq U8SetLen(U8Seq s, int32_t len) {
     s = U8Seq_Extend(s, len);
     s = U8Seq_Sub(s, 0, len);
@@ -436,6 +514,17 @@ U32SeqSeq U32SeqSeqSetLen(U32SeqSeq s, int32_t len) {
     int32_t initialSize = s.Len;
     s = U32SeqSeq_Extend(s, len);
     s = U32SeqSeq_Sub(s, 0, len);
+    if (initialSize < s.Len) {
+        memset(s.Data + initialSize, 0,
+               (size_t)(s.Len - initialSize) * sizeof(*s.Data));
+    }
+    return s;
+}
+
+U8SeqSeq U8SeqSeqSetLen(U8SeqSeq s, int32_t len) {
+    int32_t initialSize = s.Len;
+    s = U8SeqSeq_Extend(s, len);
+    s = U8SeqSeq_Sub(s, 0, len);
     if (initialSize < s.Len) {
         memset(s.Data + initialSize, 0,
                (size_t)(s.Len - initialSize) * sizeof(*s.Data));
@@ -504,10 +593,10 @@ void UndoLogify(algo_Particles p) {
     }
 }
 
-/* SetQuantizedRanges sets all the *Range fields to the correct values.
+/* SetQuantizedRanges sets all the QuantizedRange fields to the correct values.
  * 
- * If IDs have been supplied, this assumes that they have already been
- * vectorized within buf. */
+ * Note that the IDRange structs aren't included in this. Those are modified
+ * in*/
 algo_QuantizedParticles SetQuantizedRanges(
     algo_Particles p, algo_QuantizedParticles buf
 ) {
@@ -572,6 +661,8 @@ algo_QuantizedParticles VectorizeIDs(
 
     for (int i = 0; i < 3; i++) {
         util_U32UndoPeriodic(buf.ID[i], buf.IDWidth);
+        /* Note that the range setting is done here and not in
+         * SetQuantizedRanges. */
         util_U32MinMax(buf.ID[i], &buf.IDRange.X0[i], &buf.IDRange.X1[i]);
         for (int32_t j = 0; j < buf.ID[i].Len; j++) {
             buf.ID[i].Data[j] -= buf.IDRange.X0[i];

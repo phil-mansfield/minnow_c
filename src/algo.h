@@ -95,8 +95,10 @@ typedef struct algo_QuantizedVectorRange {
 
 static const algo_QuantizedVectorRange algo_EmptyQuantizedVectorRange;
 
+/* algo_QuantizedIDRange specifies the range of values that particle IDs can
+ * take on. The IDs are "vectorized," which means that they've been converted
+ * to an (ID_x, ID_y, ID_z) format.*/
 typedef struct algo_QuantizedIDRange {
-    uint8_t Depth;
     uint32_t X0[3], X1[3];
 } algo_QuantizedIDRange;
 
@@ -171,6 +173,34 @@ void QuantizedParticles_Free(algo_QuantizedParticles p);
 /* CompressedParticles_Free frees all heap-allocated memory associated with p.
  * This includes arrays referenced to by seqeunces within p. */
 void CompressedParticles_Free(algo_CompressedParticles p);
+
+/* The format used by CompressedParticles_ToBytes and
+ * CompressedParticles_FromBytes is the following:
+ *
+ * | hd: SegmentHeader |
+ * | Len_0: int32_t | ... | Len_n: int32_t |
+ * | Data_0: []uint8_t | ... | Len_n: int32_t |
+ *
+ * - hd: SegmentHeader - A header of type
+ *   struct SegmentHeader {
+ *       BlockNum, ParticleNum int32_t;
+ *       HasV, HasID, FVarsLen, U64VarsLen int32_t;
+ *   };
+ * - Len_i: int32_t - The length of the ith block.
+ * - Data_i: []uint8_t - The data of the ith block.
+ */
+
+/* CompressedParticles_ToBytes converts an algo_CompressedParticles struct to
+ * a raw byte sequence. */
+U8BigSeq CompressedParticles_ToBytes(
+    algo_CompressedParticles p, U8BigSeq buf
+);
+
+/* CompressedParticles_FromBytes converts a raw byte sequence into an
+ * algo_CompressedParticles struct. */
+algo_CompressedParticles CompressedParticles_FromBytes(
+    U8BigSeq bytes, algo_CompressedParticles buf
+);
 
 /*********************/
 /* Utility Functions */
