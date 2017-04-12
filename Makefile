@@ -35,6 +35,10 @@ CFLAGS=$(CLANG_CFLAGS)
 #CC=icc
 #CFLAGS=$(ICC_CFLAGS)
 
+# The debugging flags -D DEBUG_MOCK_BIG_ENDIAN and -D DEBUG_MOCK_LITTLE_ENDIAN
+# can be used to force the rpoject to read/write files as if it had a big/little
+# endian arcitechture.
+
 # Add/remove any additional files that aren't in src at the end of this list.
 SOURCES=$(wildcard src/*.c) lz4/lib/lz4.c
 OBJECTS=$(patsubst %.c,%.o,$(SOURCES))
