@@ -1,6 +1,7 @@
 #include "compress_util.h"
 #include "debug.h"
 #include "lz4.h"
+#include <stdio.h>
 #include <inttypes.h>
 #include <math.h>
 #include <float.h>
@@ -13,6 +14,10 @@ void checkBinIndexRange(FSeq x, float x0, float dx);
 U8Seq U8SeqSetLen(U8Seq buf, int32_t len);
 U32Seq U32SeqSetLen(U32Seq buf, int32_t len);
 FSeq FSeqSetLen(FSeq buf, int32_t len);
+bool littleEndian();
+
+void U32EndianSwap(U32Seq x);
+void U64EndianSwap(U64Seq x);
 
 /**********************/
 /* Exported Functions */
@@ -430,6 +435,31 @@ U8Seq util_UndoEntropyEncode(
     return buf;
 }
 
+uint64_t util_CheckSum(U8BigSeq bytes) {
+    uint64_t checksum = 0;
+    for (int64_t i = 0; i < bytes.Len; i++) {
+        checksum = (checksum >> 1) + ((checksum & 1) << 63);
+        checksum += (uint64_t) bytes.Data[i];
+    }
+    return checksum;
+}
+
+void util_U32LittleEndian(U32Seq x) {
+    if (!littleEndian()) { U32EndianSwap(x); }
+}
+
+void util_U64LittleEndian(U64Seq x) {
+    if (!littleEndian()) { U64EndianSwap(x); }
+}
+
+void util_U32UndoLittleEndian(U32Seq x) {
+    if (!littleEndian()) { U32EndianSwap(x); }
+}
+
+void util_U64UndoLittleEndian(U64Seq x) {
+    if (!littleEndian()) { U64EndianSwap(x); }
+}
+
 /********************/
 /* Helper Functions */
 /********************/
@@ -450,4 +480,46 @@ FSeq FSeqSetLen(FSeq buf, int32_t len) {
     buf = FSeq_Extend(buf, len);
     buf = FSeq_Sub(buf, 0, len);
     return buf;
+}
+
+bool littleEndian() {
+#if defined(DEBUG_MOCK_BIG_ENDIAN)
+    return false;
+#elif defined(DEBUG_MOCK_LITTLE_ENDIAN)
+    return true;
+#else
+    int test = 1;
+    return *(char*)&test == 1;
+#endif
+}
+
+void U32EndianSwap(U32Seq x) {
+    for (int32_t i = 0; i < x.Len; i++) {
+        uint32_t val = x.Data[i];
+
+        uint32_t x0 = val & 0xff;
+        uint32_t x1 = (val >> 8) & 0xff;
+        uint32_t x2 = (val >> 16) & 0xff;
+        uint32_t x3 = (val >> 24) & 0xff;
+
+        x.Data[i] = (x0 << 24) + (x1 << 16) + (x2 << 8) + x3;
+    }
+}
+
+void U64EndianSwap(U64Seq x) {
+    for (int32_t i = 0; i < x.Len; i++) {
+        uint64_t val = x.Data[i];
+
+        uint64_t x0 = val & 0xff;
+        uint64_t x1 = (val >> 8) & 0xff;
+        uint64_t x2 = (val >> 16) & 0xff;
+        uint64_t x3 = (val >> 24) & 0xff;
+        uint64_t x4 = (val >> 32) & 0xff;
+        uint64_t x5 = (val >> 40) & 0xff;
+        uint64_t x6 = (val >> 48) & 0xff;
+        uint64_t x7 = (val >> 56) & 0xff;
+
+        x.Data[i] = (x0 << 56) + (x1 << 48) + (x2 << 40) + (x3 << 32) +
+            (x4 << 24) + (x5 << 16) + (x6 << 8) + x7;
+    }
 }

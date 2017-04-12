@@ -23,13 +23,16 @@ bool testU32UniformPack();
 bool testU32UndoPeriodic();
 bool testEntropyEncode();
 bool testFastUniformCompress();
+bool testLittleEndian();
 
 bool U8SeqEqual(U8Seq s1, U8Seq s2);
 bool U32SeqEqual(U32Seq s1, U32Seq s2);
+bool U64SeqEqual(U64Seq s1, U64Seq s2);
 bool FSeqAlmostEqual(FSeq x1, FSeq x2, float eps, float L);
 
 void U8SeqPrint(U8Seq s);
 void U32SeqPrint(U32Seq s);
+void U64SeqPrint(U64Seq s);
 void FSeqPrint(FSeq s);
 
 void FShuffle(FSeq x, rand_State *state);
@@ -47,6 +50,7 @@ int main() {
     res = res && testU32UndoPeriodic();
     res = res && testEntropyEncode();
     res = res && testFastUniformCompress();
+    res = res && testLittleEndian();
 
     return !res;
 }
@@ -654,6 +658,72 @@ bool testFastUniformCompress() {
     return true;
 }
 
+bool testLittleEndian() {
+    bool res = true;
+
+    struct { uint32_t in[2], out[2]; } tests32[] = {
+#if defined(DEBUG_MOCK_BIG_ENDIAN)
+        {{0x00112233, 0x00abcdef}, {0x33221100, 0xefcdab00}}
+#elif defined(DEBUG_MOCK_LITTLE_ENDIAN)
+        {{0x00112233, 0x00abcdef}, {0x00112233, 0x00abcdef}}
+#else
+        {{0, 0}, {0, 0}}
+#endif
+    };
+
+    for (int i = 0; i < LEN(tests32); i++) {
+        U32Seq in = U32Seq_FromArray(tests32[i].in, 2);
+        U32Seq out = U32Seq_FromArray(tests32[i].out, 2);
+        util_U32LittleEndian(in);
+
+        if (!U32SeqEqual(in, out)) {
+            fprintf(stderr, "For test %d of 32 bit testLittleEndian, got ", i);
+            U32SeqPrint(in);
+            fprintf(stderr, ", but expected ");
+            U32SeqPrint(out);
+            fprintf(stderr, ".\n");
+            
+            res = false;
+        }
+
+        U32Seq_Free(in);
+        U32Seq_Free(out);
+    }
+
+    struct { uint64_t in[2], out[2]; } tests64[] = {
+#if defined(DEBUG_MOCK_BIG_ENDIAN)
+        {{0x0011223344556677, 0x00abcdef00abcdef},
+         {0x7766554433221100, 0xefcdab00efcdab00}}
+#elif defined(DEBUG_MOCK_LITTLE_ENDIAN)
+        {{0x0011223344556677, 0x00abcdef00abcdef},
+         {0x0011223344556677, 0x00abcdef00abcdef}}
+#else
+        {{0, 0}, {0, 0}}
+#endif
+    };
+
+    for (int i = 0; i < LEN(tests64); i++) {
+        U64Seq in = U64Seq_FromArray(tests64[i].in, 2);
+        U64Seq out = U64Seq_FromArray(tests64[i].out, 2);
+        util_U64LittleEndian(in);
+
+        if (!U64SeqEqual(in, out)) {
+            fprintf(stderr, "For test %d of 64 bit testLittleEndian, got ", i);
+            U64SeqPrint(in);
+            fprintf(stderr, ", but expected ");
+            U64SeqPrint(out);
+            fprintf(stderr, ".\n");
+            
+            res = false;
+        }
+
+        U64Seq_Free(in);
+        U64Seq_Free(out);
+    }
+
+    return res;
+}
+
 /********************/
 /* Helper Functions */
 /********************/
@@ -671,6 +741,18 @@ bool U8SeqEqual(U8Seq s1, U8Seq s2) {
 }
 
 bool U32SeqEqual(U32Seq s1, U32Seq s2) {
+    if (s1.Len != s2.Len) {
+        return false;
+    }
+    for (int32_t i = 0; i < s1.Len; i++) {
+        if (s1.Data[i] != s2.Data[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool U64SeqEqual(U64Seq s1, U64Seq s2) {
     if (s1.Len != s2.Len) {
         return false;
     }
@@ -735,6 +817,21 @@ void U32SeqPrint(U32Seq s) {
     fprintf(stderr, "%"PRIx32, s.Data[0]);
     for (int32_t i = 1; i < s.Len; i++) {
         fprintf(stderr, ", %"PRIx32, s.Data[i]);
+    }
+
+    fprintf(stderr, "]");
+}
+
+void U64SeqPrint(U64Seq s) {
+    if (s.Len == 0) {
+        fprintf(stderr, "[]");
+        return;
+    }
+
+    fprintf(stderr, "[");
+    fprintf(stderr, "%"PRIx64, s.Data[0]);
+    for (int32_t i = 1; i < s.Len; i++) {
+        fprintf(stderr, ", %"PRIx64, s.Data[i]);
     }
 
     fprintf(stderr, "]");

@@ -114,4 +114,15 @@ U8Seq util_UndoEntropyEncode(
     U8Seq compressedData, int32_t uncompressedSize, U8Seq buf
 );
 
+/* util_CheckSum computes a 64-bit BSD-style CRC checksum. */
+uint64_t util_CheckSum(U8BigSeq bytes);
+
+/* util_*LittleEndian converts a sequence from native byte ordering into a
+ * little endian format and util_*UndoLittleEndian converts back. */
+void util_U32LittleEndian(U32Seq x);
+void util_U64LittleEndian(U64Seq x);
+
+void util_U32UndoLittleEndian(U32Seq x);
+void util_U64UndoLittleEndian(U64Seq x);
+
 #endif /* MNW_COMPRESS_UTIL_H_ */
