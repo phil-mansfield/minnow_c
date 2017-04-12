@@ -45,9 +45,9 @@ def main():
 
     print()
     if mode == "h":
-        print("#define GENERATE_SEQ_HEADER(type, seqType) \\")
+        print("#define GENERATE_SEQ_HEADER(type, seqType, bigSeqType) \\")
     elif mode == "c":
-        print("#define GENERATE_SEQ_BODY(type, seqType) \\")
+        print("#define GENERATE_SEQ_BODY(type, seqType, bigSeqType) \\")
 
     for i, line in enumerate(saved_lines):
         if i == len(saved_lines) - 1:
@@ -67,11 +67,15 @@ def save_line(line):
 def convert_to_macro(line):
     if '"' in line:
         ExSeq_replace = '"#seqType"_'
+        ExBigSeq_replace = '"#bigSeqType"_'
     else:
         ExSeq_replace = "seqType##_"
+        ExBigSeq_replace = 'bigSeqType##_'
 
     line = line.replace("ExSeq_", ExSeq_replace)
     line = line.replace("ExSeq", "seqType")
+    line = line.replace("ExBigSeq_", ExBigSeq_replace)
+    line = line.replace("ExBigSeq", "bigSeqType")
     line = line.replace("Example", "type")
     
     return line

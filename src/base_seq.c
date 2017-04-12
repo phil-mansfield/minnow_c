@@ -162,8 +162,159 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
     return s;
 }
 
+ExBigSeq ExBigSeq_Empty() {
+    ExBigSeq s = {NULL, 0, 0};
+    return s;
+}
 
-#define GENERATE_SEQ_BODY(type, seqType) \
+ExBigSeq ExBigSeq_New(int64_t len) {
+    DebugAssert(len >= 0) {
+        Panic("ExBigSeq_New given negative length, %"PRId64".", len);
+    }
+
+    int64_t cap = ((len / 8) + (len % 8 != 0))*8;
+    ExBigSeq s = { .Data = NULL, .Len = len, .Cap = cap};
+    if (!len) { return s; }    
+
+    /* The last four bytes are used to store the underlying cap size. */
+    s.Data = malloc((size_t)cap*sizeof(*s.Data) + 4);
+    AssertAlloc(s.Data);
+
+    memset(s.Data, 0, (size_t)cap*sizeof(*s.Data) + 4);
+    int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap);
+    *capPtr = s.Cap;
+
+    return s;
+}
+
+ExBigSeq ExBigSeq_FromArray(Example *data, int64_t len) {
+    DebugAssert(len >= 0) {
+        Panic("ExBigSeq_FromArray given negative length, %"PRId64".", len);
+    }
+
+    ExBigSeq s = ExBigSeq_New(len);
+    for (int64_t i = 0; i < len; i++) {
+        s.Data[i] = data[i];
+    }
+    return s;
+}
+
+ExBigSeq ExBigSeq_NewWithCap(int64_t len, int64_t cap) {
+    DebugAssert(len >= 0) {
+        Panic("ExBigSeq_NewWithCap given negative length, %"PRId64".", len);
+    }
+    DebugAssert(cap >= len) {
+        Panic("ExBigSeq_NewWithCap given cap, %"PRId64
+              ", smaller than length, %"PRId64".", cap, len);
+    }
+
+    ExBigSeq s = ExBigSeq_New(cap);
+    s.Len = len;
+    return s;
+}
+
+void ExBigSeq_Free(ExBigSeq s) {
+    if ( s.Data == NULL) { return; }
+  
+    int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap);
+    DebugAssert(!capPtr || *capPtr >= s.Cap) {
+	    Panic("*capPtr = %"PRId64", but s.Cap = %"PRId64".", *capPtr, s.Cap);
+    }
+    free(s.Data - (*capPtr - s.Cap));
+    s.Data = NULL; /* To make errors easier to find. */
+    return;
+}
+
+ExBigSeq ExBigSeq_Append(ExBigSeq s, Example tail) {
+    if (s.Len == s.Cap) {
+        int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap);
+        DebugAssert(!capPtr || *capPtr == s.Cap) {
+            Panic("Appending to a subsequence.%s", "");
+        }
+
+        s.Cap = (int64_t) (ALPHA * (float) (1 + s.Cap));
+        s.Cap = ((s.Cap / 8) + (s.Cap % 8 != 0))*8;
+
+        s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
+        AssertAlloc(s.Data);
+        
+        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4);
+        capPtr = (int64_t*)(void*)(s.Data + s.Cap);
+        *capPtr = s.Cap;
+    }
+
+    s.Data[s.Len] = tail;
+    s.Len++;
+
+    return s;
+}
+
+ExBigSeq ExBigSeq_Join(ExBigSeq s1, ExBigSeq s2) {
+    if (s1.Len + s2.Len  > s1.Cap) {
+        int64_t *capPtr = (int64_t*)(void*)(s1.Data + s1.Cap);
+        DebugAssert(!capPtr || *capPtr == s1.Cap) {
+            Panic("Appending to a subsequence.%s", "");
+        }
+
+        s1.Cap = (int64_t) (ALPHA * (float) (s1.Len + s2.Len));
+        s1.Cap = ((s1.Cap / 8) + (s1.Cap % 8 != 0))*8;
+
+        s1.Data = realloc(s1.Data, (size_t)s1.Cap*sizeof(*s1.Data) + 4);
+        AssertAlloc(s1.Data);
+
+        memset(s1.Data + s1.Len, 0, (size_t)(s1.Cap - s1.Len + 4));
+        capPtr = (int64_t*)(void*)(s1.Data + s1.Cap);
+        *capPtr = s1.Cap;
+    }
+
+    memcpy(s1.Data + s1.Len, s2.Data, (size_t)s2.Len * sizeof(*s2.Data));
+    s1.Len +=  s2.Len;
+
+    return s1;
+}
+
+ExBigSeq ExBigSeq_Sub(ExBigSeq s, int64_t start, int64_t end) {
+    DebugAssert(start >= 0) {
+        Panic("ExBigSeq_Sub given negative start index, %"PRId64".", start);
+    }
+    DebugAssert(end >= start) {
+        Panic("ExBigSeq_Sub given start index, %"PRId64
+              " which is smaller than end index %"PRId64".", start, end);
+    }
+    DebugAssert(end <= s.Cap) {
+        Panic("ExBigSeq_Sub given end index, %"PRId64
+              " which is larger than cap %"PRId64".", end, s.Cap);
+    }
+
+    ExBigSeq sub;
+    sub.Data = s.Data + start;
+    sub.Len = end - start;
+    sub.Cap = s.Cap - start;
+
+    return sub;
+}
+
+ExBigSeq ExBigSeq_Extend(ExBigSeq s, int64_t n) {
+    DebugAssert(n >= 0) {
+        Panic("ExBigSeq_Extend given negative cap size, %"PRId64".", n);
+    }
+
+    if (s.Cap >= n) { 
+        return s;
+    }
+
+    s.Cap = ((n / 8) + (n % 8 != 0))*8;
+    s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4);
+    AssertAlloc(s.Data);
+    memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4);
+
+    int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap);
+    *capPtr = s.Cap;
+    return s;
+}
+
+
+#define GENERATE_SEQ_BODY(type, seqType, bigSeqType) \
     seqType seqType##_Empty() { \
         seqType s = {NULL, 0, 0}; \
         return s; \
@@ -280,6 +431,125 @@ ExSeq ExSeq_Extend(ExSeq s, int32_t n) {
         AssertAlloc(s.Data); \
         memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4); \
         int32_t *capPtr = (int32_t*)(void*)(s.Data + s.Cap); \
+        *capPtr = s.Cap; \
+        return s; \
+    } \
+    bigSeqType bigSeqType##_Empty() { \
+        bigSeqType s = {NULL, 0, 0}; \
+        return s; \
+    } \
+    bigSeqType bigSeqType##_New(int64_t len) { \
+        DebugAssert(len >= 0) { \
+            Panic(""#bigSeqType"_New given negative length, %"PRId64".", len); \
+        } \
+        int64_t cap = ((len / 8) + (len % 8 != 0))*8; \
+        bigSeqType s = { .Data = NULL, .Len = len, .Cap = cap}; \
+        if (!len) { return s; }     \
+        s.Data = malloc((size_t)cap*sizeof(*s.Data) + 4); \
+        AssertAlloc(s.Data); \
+        memset(s.Data, 0, (size_t)cap*sizeof(*s.Data) + 4); \
+        int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap); \
+        *capPtr = s.Cap; \
+        return s; \
+    } \
+    bigSeqType bigSeqType##_FromArray(type *data, int64_t len) { \
+        DebugAssert(len >= 0) { \
+            Panic(""#bigSeqType"_FromArray given negative length, %"PRId64".", len); \
+        } \
+        bigSeqType s = bigSeqType##_New(len); \
+        for (int64_t i = 0; i < len; i++) { \
+            s.Data[i] = data[i]; \
+        } \
+        return s; \
+    } \
+    bigSeqType bigSeqType##_NewWithCap(int64_t len, int64_t cap) { \
+        DebugAssert(len >= 0) { \
+            Panic(""#bigSeqType"_NewWithCap given negative length, %"PRId64".", len); \
+        } \
+        DebugAssert(cap >= len) { \
+            Panic(""#bigSeqType"_NewWithCap given cap, %"PRId64 \
+                  ", smaller than length, %"PRId64".", cap, len); \
+        } \
+        bigSeqType s = bigSeqType##_New(cap); \
+        s.Len = len; \
+        return s; \
+    } \
+    void bigSeqType##_Free(bigSeqType s) { \
+        if ( s.Data == NULL) { return; } \
+        int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap); \
+        DebugAssert(!capPtr || *capPtr >= s.Cap) { \
+    	    Panic("*capPtr = %"PRId64", but s.Cap = %"PRId64".", *capPtr, s.Cap); \
+        } \
+        free(s.Data - (*capPtr - s.Cap)); \
+        s.Data = NULL; /* To make errors easier to find. */ \
+        return; \
+    } \
+    bigSeqType bigSeqType##_Append(bigSeqType s, type tail) { \
+        if (s.Len == s.Cap) { \
+            int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap); \
+            DebugAssert(!capPtr || *capPtr == s.Cap) { \
+                Panic("Appending to a subsequence.%s", ""); \
+            } \
+            s.Cap = (int64_t) (ALPHA * (float) (1 + s.Cap)); \
+            s.Cap = ((s.Cap / 8) + (s.Cap % 8 != 0))*8; \
+            s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4); \
+            AssertAlloc(s.Data); \
+            memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4); \
+            capPtr = (int64_t*)(void*)(s.Data + s.Cap); \
+            *capPtr = s.Cap; \
+        } \
+        s.Data[s.Len] = tail; \
+        s.Len++; \
+        return s; \
+    } \
+    bigSeqType bigSeqType##_Join(bigSeqType s1, bigSeqType s2) { \
+        if (s1.Len + s2.Len  > s1.Cap) { \
+            int64_t *capPtr = (int64_t*)(void*)(s1.Data + s1.Cap); \
+            DebugAssert(!capPtr || *capPtr == s1.Cap) { \
+                Panic("Appending to a subsequence.%s", ""); \
+            } \
+            s1.Cap = (int64_t) (ALPHA * (float) (s1.Len + s2.Len)); \
+            s1.Cap = ((s1.Cap / 8) + (s1.Cap % 8 != 0))*8; \
+            s1.Data = realloc(s1.Data, (size_t)s1.Cap*sizeof(*s1.Data) + 4); \
+            AssertAlloc(s1.Data); \
+            memset(s1.Data + s1.Len, 0, (size_t)(s1.Cap - s1.Len + 4)); \
+            capPtr = (int64_t*)(void*)(s1.Data + s1.Cap); \
+            *capPtr = s1.Cap; \
+        } \
+        memcpy(s1.Data + s1.Len, s2.Data, (size_t)s2.Len * sizeof(*s2.Data)); \
+        s1.Len +=  s2.Len; \
+        return s1; \
+    } \
+    bigSeqType bigSeqType##_Sub(bigSeqType s, int64_t start, int64_t end) { \
+        DebugAssert(start >= 0) { \
+            Panic(""#bigSeqType"_Sub given negative start index, %"PRId64".", start); \
+        } \
+        DebugAssert(end >= start) { \
+            Panic(""#bigSeqType"_Sub given start index, %"PRId64 \
+                  " which is smaller than end index %"PRId64".", start, end); \
+        } \
+        DebugAssert(end <= s.Cap) { \
+            Panic(""#bigSeqType"_Sub given end index, %"PRId64 \
+                  " which is larger than cap %"PRId64".", end, s.Cap); \
+        } \
+        bigSeqType sub; \
+        sub.Data = s.Data + start; \
+        sub.Len = end - start; \
+        sub.Cap = s.Cap - start; \
+        return sub; \
+    } \
+    bigSeqType bigSeqType##_Extend(bigSeqType s, int64_t n) { \
+        DebugAssert(n >= 0) { \
+            Panic(""#bigSeqType"_Extend given negative cap size, %"PRId64".", n); \
+        } \
+        if (s.Cap >= n) {  \
+            return s; \
+        } \
+        s.Cap = ((n / 8) + (n % 8 != 0))*8; \
+        s.Data = realloc(s.Data, (size_t)s.Cap*sizeof(*s.Data) + 4); \
+        AssertAlloc(s.Data); \
+        memset(s.Data + s.Len, 0, sizeof(*s.Data)*(size_t)(s.Cap - s.Len) + 4); \
+        int64_t *capPtr = (int64_t*)(void*)(s.Data + s.Cap); \
         *capPtr = s.Cap; \
         return s; \
     }
