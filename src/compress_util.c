@@ -439,26 +439,36 @@ uint32_t util_Checksum(U8Seq bytes) {
     uint32_t checksum = 0;
     for (int32_t i = 0; i < bytes.Len; i++) {
         // BSD implements this with a conditional, but that's crazy.
-        checksum = (checksum >> 1) + ((checksum & 1) << 63);
+        checksum = (checksum >> 1) + ((checksum & 1) << 31);
         checksum += (uint32_t) bytes.Data[i];
     }
     return checksum;
 }
 
-void util_U32LittleEndian(U32Seq x) {
-    if (!littleEndian()) { U32EndianSwap(x); }
+uint32_t util_U32LittleEndian(uint32_t x) {
+    if (littleEndian()) { return x; }
+
+    uint32_t x0 = x & 0xff;
+    uint32_t x1 = (x >> 8) & 0xff;
+    uint32_t x2 = (x >> 16) & 0xff;
+    uint32_t x3 = (x >> 24) & 0xff;
+    
+    return (x0 << 24) + (x1 << 16) + (x2 << 8) + x3;
 }
 
-void util_U64LittleEndian(U64Seq x) {
-    if (!littleEndian()) { U64EndianSwap(x); }
+int32_t util_I32LittleEndian(int32_t x) {
+    if (littleEndian()) { return x; }
+    uint32_t u = *(uint32_t*)(&x);
+    u = util_U32LittleEndian(u);
+    return *(int32_t*)(&u);
 }
 
-void util_U32UndoLittleEndian(U32Seq x) {
-    if (!littleEndian()) { U32EndianSwap(x); }
+uint32_t util_U32UndoLittleEndian(uint32_t x) {
+    return util_U32LittleEndian(x);
 }
 
-void util_U64UndoLittleEndian(U64Seq x) {
-    if (!littleEndian()) { U64EndianSwap(x); }
+int32_t util_I32UndoLittleEndian(int32_t x)  {
+    return util_I32LittleEndian(x);
 }
 
 /********************/

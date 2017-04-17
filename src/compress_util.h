@@ -115,14 +115,14 @@ U8Seq util_UndoEntropyEncode(
 );
 
 /* util_Checksum computes a 64-bit BSD-style CRC checksum. */
-uint64_t util_Checksum(U8BigSeq bytes);
+uint32_t util_Checksum(U8Seq bytes);
 
 /* util_*LittleEndian converts a sequence from native byte ordering into a
  * little endian format and util_*UndoLittleEndian converts back. */
-void util_U32LittleEndian(U32Seq x);
-void util_U64LittleEndian(U64Seq x);
+uint32_t util_U32LittleEndian(uint32_t x);
+int32_t util_I32LittleEndian(int32_t x);
 
-void util_U32UndoLittleEndian(U32Seq x);
-void util_U64UndoLittleEndian(U64Seq x);
+uint32_t util_U32UndoLittleEndian(uint32_t x);
+int32_t util_I32UndoLittleEndian(int32_t x);
 
 #endif /* MNW_COMPRESS_UTIL_H_ */
