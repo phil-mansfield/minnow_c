@@ -177,17 +177,34 @@ void CompressedParticles_Free(algo_CompressedParticles p);
 /* The format used by CompressedParticles_ToBytes and
  * CompressedParticles_FromBytes is the following:
  *
- * | hd: SegmentHeader |
- * | Len_0: int32_t | ... | Len_n: int32_t |
- * | Data_0: []uint8_t | ... | Len_n: int32_t |
+ * +----------------------+
+ * | shd : SegmentHeader  |
+ * +----------------------+ 
+ * | fhd : []FieldHeader  | 
+ * +----------------------+
+ * | bhd : []BlockHeader  | 
+ * +----------------------+
+ * | Blocks : [][]uint8_t | 
+ * +----------------------+
  *
- * - hd: SegmentHeader - A header of type
  *   struct SegmentHeader {
- *       BlockNum, ParticleNum int32_t;
- *       HasV, HasID, FVarsLen, U64VarsLen int32_t;
+ *       HeaderChecksum uint32_t;
+ *       BlockNum       int32_t;
+ *       FieldNum       int32_t;
+ *       ParticleNum    int32_t;
  *   };
- * - Len_i: int32_t - The length of the ith block.
- * - Data_i: []uint8_t - The data of the ith block.
+ *
+ *   struct FieldHeader {
+ *       Version       uint32_t;
+ *       FieldCode     uint32_t;
+ *       AlgorithmCode uint32_t;
+ *       BlockNum      int32_t;
+ *   };
+ *
+ *   struct BlockHeader {
+ *       Len      int32_t;
+ *       Checksum uint32_t;
+ *   };
  */
 
 /* CompressedParticles_ToBytes converts an algo_CompressedParticles struct to

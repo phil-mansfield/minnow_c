@@ -174,6 +174,7 @@ void CompressedParticles_Free(algo_CompressedParticles p) {
     U8SeqSeq_Free(p.Blocks);
 }
 
+/* sizeof(SegmentHeader) MUST be divisible by 4. Otherwise  */
 typedef struct {
     int32_t BlockNum, ParticleNum;
     int32_t HasV, HasID, FVarsLen, U64VarsLen;
@@ -183,7 +184,8 @@ U8BigSeq CompressedParticles_ToBytes(
     algo_CompressedParticles p, U8BigSeq buf
 ) {
     int64_t headerSize = sizeof(SegmentHeader);
-    int64_t lenSize = (int64_t) sizeof(p.Blocks.Data[0].Len) * p.Blocks.Len;
+    int64_t lenSize = (int64_t) (4 * p.Blocks.Len);
+    int64_t checksumSize = (int64_t) (4 * p.Blocks.Len);
     int64_t dataSize = 0;
     for (int32_t i = 0; i < p.Blocks.Len; i++) {
         dataSize += (int64_t) p.Blocks.Data[i].Len;
@@ -193,8 +195,9 @@ U8BigSeq CompressedParticles_ToBytes(
     buf = U8BigSeq_Sub(buf, 0, headerSize + lenSize + dataSize);
 
     uint8_t *headerPtr = buf.Data;
-    uint8_t *lenPtr = buf.Data + headerSize;
-    uint8_t *dataPtr = buf.Data + headerSize + lenSize;
+    int32_t *lenPtr = (int32_t*)(void*)(buf.Data + headerSize);
+    uint32_t *checksumPtr = (uint32_t*)(void*)(buf.Data + headerSize + lenSize);
+    uint8_t *dataPtr = buf.Data + headerSize + lenSize + checksumSize;
 
     SegmentHeader hd = {
         .BlockNum = p.Blocks.Len, .ParticleNum = p.ParticleNum,
@@ -202,14 +205,18 @@ U8BigSeq CompressedParticles_ToBytes(
         .FVarsLen = p.FVarsLen, .U64VarsLen = p.FVarsLen
     };
 
+    hd.BlockNum = util_I32LittleEndian(hd.BlockNum);
+    hd.ParticleNum = util_I32LittleEndian(hd.ParticleNum);
+    hd.HasV = util_I32LittleEndian(hd.HasV);
+
     memcpy(headerPtr, &hd, headerSize);
 
     for (int32_t i = 0; i < p.Blocks.Len; i++) {
         U8Seq block = p.Blocks.Data[i];
-        memcpy(lenPtr, &p.Blocks.Data[i].Len, sizeof(block.Len));
-        memcpy(dataPtr, p.Blocks.Data[i].Data, p.Blocks.Data[i].Len);
-        lenPtr += sizeof(block.Len);
-        dataPtr += p.Blocks.Len;
+        lenPtr[i] = block.Len;
+        checksumPtr[i] = util_Checksum(block);
+        memcpy(dataPtr, block.Data, block.Len);
+        dataPtr += block.Len;
     }
 
     return buf;
