@@ -1,0 +1,405 @@
+\pdfoutput=1
+
+\documentclass[numberedappendix,apj]{emulateapj}
+\usepackage{apjfonts}
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue,citecolor=blue]{hyperref}
+\usepackage{amsmath}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{minted}
+
+
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+\input{citation_fix}
+\setcounter{figure}{0}
+
+\begin{document}
+
+\shorttitle{Splashback shells and splashback radii of individual CDM halos}
+\shortauthors{Mansfield, Kravtsov \& Diemer}
+
+\title{\textsc{minnow} Compression Technical Specification}
+
+\author{Philip Mansfield\altaffilmark{1,2,$\star$}}
+
+\altaffiltext{1}{Department of Astronomy \& Astrophysics, The University of Chicago, Chicago, IL 60637 USA}
+\altaffiltext{2}{Kavli Institute for Cosmological Physics, The University of Chicago, Chicago, IL 60637 USA}
+\altaffiltext{$\star$}{mansfield@uchicago.edu}
+
+\section{Introduction}
+
+There are two parts of the \textsc{minnow} specifcation: a collection of
+compression algorithms designed to work with particle data and a library for
+creating file formats that combines these algorithms with a flexible byte-level
+wrapper. The v1.0 release of \textsc{minnow} also contains two standardized
+drivers which use this library to create compressed versions of Gadget-2 and
+Illustris snapshots (\texttt{*.g2.min} and \texttt{*.il.min} files,
+respectively). Table \ref{tab:separation_of_duties} shows which responsibilities
+are taken on by \textsc{minnow} and which fall upon the client drivers.
+
+\begin{table}
+   \centering
+   \caption{Client reponsibilities}
+   \label{tab:separation_of_duties}
+   \begin{tabular}{ll}
+   \hline
+   \hline       
+   \\
+   Client Responsibility & \textsc{minnow} Responsibility
+   \\
+   \hline
+   \\
+   Segmenting particle snapshots & Compressing particle segments \\
+   Determining target accuracies & Maintaining target accuracies \\
+   Optimally ordering data & Maintaining data order \\
+   Distributed memory parallelization & Shared memory parallelization \\
+   Opening and closing files & Reading and writing to files \\
+   Testing that files decompress correctly & 
+   \\
+   \hline
+   \\
+   \end{tabular}
+  \tablecomments{The separation of responsibilities between \textsc{minnow}
+  and the client code which uses it.}
+\end{table}
+
+There are three reasons why you would read this document: first, because you
+are writing a driver which will compress some other file format or are writing
+application code which compress data directly from a simulation without an
+intermediate stage; second, because you are adding a new compression algorithm
+to the \textsc{minnow} collection; and third because you are writing code that
+needs to implement the \textsc{minnow} standard.
+
+Nothing in this document is strictly neccessary for readers in the first group,
+although it is highly suggested that authors of file formats which use
+\textsc{minnow} as their core use the file formats described in section
+\ref{sec:IO_format} as a reference. Readers in the second group are only
+required to read section \ref{sec:compress} up to the end of
+\ref{sec:input_and_output}, although it is suggested that they read all of
+section \ref{sec:compress} to understand the design decisions that went into
+other algorithms. Readers in the third group must read everything.
+
+\section{Compression Algorithms}
+\label{sec:compress}
+
+\subsection{Quantization}
+\label{sec:quantization}
+
+\subsection{Inputs and Outputs}
+\label{sec:input_and_output}
+
+\subsection{\textsc{Trim} Algorithm}
+\label{sec:trim}
+
+\subsection{\textsc{Coil} Algorithm}
+\label{sec:coil}
+
+\subsection{\textsc{Octo} Algorithm}
+\label{sec:octo}
+
+\subsection{\textsc{Sort} Algorithm}
+\label{sec:sort}
+
+\subsection{\textsc{Cart} Algorithm}
+\label{sec:cart}
+
+\section{Segment Specification}
+\label{sec:segment_format}
+
+\begin{figure}
+   \centering
+   \includegraphics[width=\columnwidth]{segment_format.pdf}
+   \caption{placeholder caption}
+   \label{fig:segment_format}
+\end{figure}
+
+The basic input/output unit of \textsc{minnow} is a particle ``segment.'' A
+particle segment is a collection of $< 10^7$ localized particles
+supplied by a user to \textsc{minnow} and represent some \emph{subset} of a
+simulation's total particle sample (see section \ref{sec:particle_limit} for
+more discussion on the per-segment particle limit). The byte stream returned by
+\textsc{minnow} represents each ``field'' of the particles (e.g. position, ID,
+pressure) with some number of arrays of bytes, called ``blocks.'' The number of
+blocks that correspond to a particular field and the exact content of each block
+is algorithm and field dependent.
+
+Formally, compressed segments consist of a \texttt{SegmentHeader} struct
+followed by an array of \texttt{FieldHeader} structs (one for each particle
+field), followed by an array of \texttt{BlockHeader} structs (one for each
+block). These are followed by the corresponding data blocks, which take up the
+vast majority of the space in the file. The layout of a compressed segment
+is shown in Figure \ref{fig:segment_format}.
+
+\subsubsection{\texttt{SegmentHeader} Specification}
+
+The \texttt{SegmentHeader} contains information on the layout of the segment:
+
+\begin{minted}{c}
+struct SegmentHeader {
+    uint32_t Checksum;
+    int32_t  BlockNum;
+    int32_t  FieldNum;
+    int32_t  ParticleNum;
+}
+\end{minted}
+
+The fields are self explanitory with the exception of \texttt{Checksum}.
+\texttt{Checksum} is the result of applying the checksum algorithm described in
+section \ref{sec:checksum} to all data in the segment with the exception of
+the blocks and \texttt{Checksum} itself. More precisely, the order in which
+bytes are evaluated is the same as if a pointer were taken to \texttt{BlockNum}
+and the next $12 + 16F + 8B$ bytes were read on a little endian machine. Here,
+$F$ is the number of fields and $B$ is the number of blocks.
+
+\subsubsection{\texttt{FieldHeader} Specification}
+
+The \texttt{FieldHeader} struct represents one of the variable fields of the
+particle segment and gives \textsc{minnow} information on how to decode it:
+
+\begin{minted}{c}
+struct FieldHeader {
+    uint32_t FieldCode;
+    uint32_t AlgorithmCode;
+    uint32_t Version;
+    int32_t  BlockNum;
+}
+\end{minted}
+
+The \texttt{FieldCode} and \texttt{AlgoirthmCode} fields give the type of the
+and encoding algorithm of this particular field. See section
+\ref{sec:coding_conventions} for more information on the values these codes
+take on. The \texttt{Version} field
+
+\subsubsection{\texttt{BlockHeader} Specification}
+
+The \texttt{BlockHeader} struct represents a single data block:
+
+\begin{minted}{c}
+struct BlockHeader {
+    int32_t  Length;
+    uint32_t Checksum;
+}
+\end{minted}
+
+The \texttt{Length} field gives the number of bytes within the block and the
+\texttt{Checksum} field gives the checksum for this block using the algorithm
+described in section \ref{sec:checksum}. Algorithms may, but are not required to
+fail if an I/O error has caused a block checksum to fail and may, instead,
+return some subset of particles as \texttt{NaN} for the corresponding field.
+This allows decompression algorithms to attempt to localize or correct damage.
+This is the primary strength of the block system, as it can prevent entire
+fields or even entire segments from being invalidated by relatively small
+I/O errors.
+
+\subsubsection{Alignment}
+
+All header fields have sizes divisible by eight. All algorithms included with
+the v1.0 release of \textsc{minnow} force blocks to lengths which are dvisible
+by eight. This menas that all blocks can be safely cast to arrays of
+arbitrary width integer types without violating the strict alignment
+requirements that exist on some computing architectures.
+
+\subsection{Suggested I/O Specification}
+\label{sec:IO_format}
+
+\begin{minted}{c}
+struct IOHeader {
+    uint32_t Magic;
+    uint32_t Version;
+    float Origin[3];
+    float Width[3];
+    uint64_t SegmentBytes;
+    uint64_t NextIOHeader;
+};
+\end{minted}
+
+\begin{figure}
+   \centering
+   \includegraphics[width=\columnwidth]{IO_format.pdf}
+   \caption{The binary format of a \texttt{*.g2.min} file which contains
+   particles
+   read from a \textsc{Gadget-2} snapshot. the \texttt{.min} file contains
+   arbitrarily many particle segments, each of which has been prepended with
+   a \textsc{minnow} I/O header and appended with the segment's original header
+   within the \textsc{Gadget-2} format. The binary format an \textsc{IOHeader}
+   takes is given in section \ref{sec:IO_format} and the binary format of
+   a segment is shown in Figure \ref{fig:segment_format}.}
+   \label{fig:IO_format}
+\end{figure}
+
+\section{Miscellaneous Topics}
+
+\subsection{Version Encoding}
+\label{sec:version}
+
+Precise version semantics are important because \textsc{minnow}
+garuantees that once a particle segment has been compressed, it will
+always be possible to decompress that segment regardless of any further version
+updates, bug fixes, or binary API changes.
+
+The most important realization of this difficulty is the following scenario:
+User $A$ compresses a particle
+segment with algorithm $X$ and confirms that the segment decompresses
+correctly. Later, user $B$ compresses a particle segment with algorithm $X$ and
+encounters an edge case which prevents correct decompression. The fix to this
+bug requires a breaking change to the binary API of algorithm $X$ (say,
+a change in the width of a header field). If user $A$ tries to decompress
+their segment with the fixed code, the decompression may fail even though
+decompression is successful with the incorrect code.
+
+Ideally, we would like a solution to this problem which allows user $A$ to still
+benefit from benign updates to algorithm $X$ or breaking updates to other
+algorithms and which doesn't require her or other users accessing her data to
+manually keep track of which versions \textsc{minnow} are consistent with her
+existing data.
+
+To do this, we make use of a modification to Preston-Werner's ``semantic
+versioning'' specification\footnote{http://semver.org/}. Versions are specified
+by major, minor, and patch number ($x$, $y$, and $z$, respectively) and are
+written as ``$x.y.z$.'' Whenever an update is made to an algorithm is updated,
+one of the three numbers is incremented by one and the numbers to the right of
+it are set to zero.
+
+If the update is completely benign (such as a performance optimization or
+an addition to the documentation) or if it demonstrably only causes
+segments which had previously been incorrectly decompressed to be correctly
+decompressed, the patch number is incremented. If an update is suspected of
+causing a segment which had previously be correctly decompressed to be
+incorrectly decompressed (mostly likely through an improvement to the binary
+API), the minor number is incremented. If an update will cause breaking changes
+to the external API (such as changes to exported library function signatures),
+or major qualitative changes to the structure of the algorithm
+the major number is incremented.
+
+Whenever the major or minor number of an algoritm is updated, a frozen version
+of the code implementing it is stored within the project's source. Whenever a
+patch number is updated, the code is changed without freezing. Any segment
+compressed with a given major and minor number will be decompressed with the
+most recent patch with the same major and minor number.
+
+\textsc{minnow} code which is not related to compression and decompression
+(such as quantization routines or \textsc{SegmentHeader} management) follows
+the same verioning scheme with the version number stored in a segment's 
+\texttt{IOHeader}.
+
+Versions are stored within a \texttt{uint32\_t} value by storing the patch
+number in eight lest significant bits, the minor number in the next eight least
+signficant bits and the major number in the next eight least signficiant
+bits. The remaining eight bits are reserved for implementation-defined flags
+which have no effect on the output of \textsc{minnow} (v1.0 of our
+implementation of this specification uses them to specify development states
+like alpha, beta, rc, etc.). The benefit of this arrangement is that versions
+can be compared with one another by simply masking away the eight most
+signficiant bits and using normal integer comparisons.
+
+\subsection{Segment Particle Limit}
+\label{sec:particle_limit}
+
+\subsection{Code Naming Conventions}
+\label{sec:coding_conventions}
+
+\begin{table}
+   \centering
+   \caption{Field Codes}
+   \label{tab:field_codes}
+   \begin{tabular}{ccc}
+   \hline
+   \hline       
+   \\
+   Field & Field Abbreviation & Numeric Value
+   \\
+   \hline
+   \\
+   Position & \textsc{Posn} & 0x506f736e \\
+   Velocity & \textsc{Velc} & 0x56656c63 \\
+   Particle ID & \textsc{Ptid} & 0x50746964 \\
+   Unspecified float & \textsc{Unsf} & 0x556e7366 \\
+   Unspecified int & \textsc{Unsi} & 0x556e7369
+   \\
+   \hline
+   \\
+   \end{tabular}
+  \tablecomments{The numeric values that each algorithm is encoded with in
+  the \texttt{FieldCode} field of the \texttt{FieldHeader} struct.
+  Discussion on the rationale behind these values can be found in section
+  \ref{sec:coding_conventions}.}
+\end{table}
+
+\begin{table}
+   \centering
+   \caption{Algorithm Codes}
+   \label{tab:algorithm_codes}
+   \begin{tabular}{cc}
+   \hline
+   \hline       
+   \\
+   Algorithm Name & Numeric Value
+   \\
+   \hline
+   \\
+   \textsc{Trim} & 0x5472696d \\
+   \textsc{Diff} & 0x44696666 \\
+   \textsc{Coil} & 0x436f696c \\
+   \textsc{Octo} & 0x4f63746f \\
+   \textsc{Sort} & 0x536f7274 \\
+   \textsc{Cart} & 0x43617274
+   \\
+   \hline
+   \\
+   \end{tabular}
+  \tablecomments{The numeric values that each algorithm is encoded with in
+  the \texttt{AlgorithmCode} field of the \texttt{FieldHeader} struct.
+  Discussion on the rationale behind these values can be found in section
+  \ref{sec:coding_conventions}.}
+\end{table}
+
+The \texttt{uint32\_t} values which encode different fields and algorithms in
+the \texttt{FieldHeader} struct are given in Table \ref{tab:field_codes} and
+Table \ref{tab:algorithm_codes}, respectively. We take the convention that
+every field and algorithm must have a four character name and that the
+corresponding code must be the \texttt{uint32\_t} variable created by setting
+the most significant byte to the first character of the name, the second most
+signifiant to the second byte and so on.
+
+The rationale for this scheme over a simple incremental one is that it allows
+uncoordinated reasearch groups to develop new compression algorithms in parallel
+without worrying that the algorithm and field codes they develop will
+accidentally conflict and potentially invalidate particle segments they have 
+written to disk the next time they update \textsc{minnow}.
+
+
+\subsection{Checksum Algorithm}
+\label{sec:checksum}
+
+Minnow computes checksums through a simple and widely known cyclic redundancy
+check algorithm:
+
+\begin{minted}{c}
+uint32_t checksum = 0xff;
+for (int32_t i = 0; i < n; i++) {
+    checksum = (checksum >> 1) +
+        ((checksum & 1) << 31);
+    checksum += (uint32_t) bytes[i];
+}
+return checksum;
+\end{minted}
+
+The checksum is initialized to \texttt{0xff} instead of 0 to allow for the
+detection of I/O errors which clear both the checksum and all the data which it
+is associated with.
+
+\subsection{Endianness}
+\label{sec:endianness}
+
+To ensure that files created on one machine may be unambiguously read on other
+machines, all \textsc{minnow} headers are written in little endian byte order
+and all values are written to chunks in little endian byte order. Decoding is
+always done from a little endian byte order to the byte order of the current
+machine. All drivers supplied along with v1.0 of \textsc{minnow} use the same
+convention.
+
+\end{document}
