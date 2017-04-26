@@ -7,20 +7,11 @@ typedef struct {
 } semver;
 
 bool semver_Greater(uint32_t v1, uint32_t v2) {
-    if (semver_Major(v1) > semver_Major(v2)) { return true; }
-    if (semver_Major(v1) < semver_Major(v2)) { return false; }
-
-    if (semver_Minor(v1) > semver_Minor(v2)) { return true; }
-    if (semver_Minor(v1) < semver_Minor(v2)) { return false; }
-
-    if (semver_Patch(v1) > semver_Patch(v2)) { return true; }
-    return false;
+    return (v1 & 0xffffff) > (v2 & 0xffffff);
 }
 
 bool semver_Equals(uint32_t v1, uint32_t v2) {
-    return semver_Major(v1) == semver_Major(v2) && 
-        semver_Minor(v1) == semver_Minor(v2) &&
-        semver_Patch(v2) == semver_Patch(v2);
+    return (v1 & 0xffffff) == (v2 & 0xffffff);
 }
 
 void semver_ToString(uint32_t version, char *buf) {
