@@ -5,6 +5,19 @@
 #include <string.h>
 #include <stdint.h>
 
+#define FIELD_POSN 0x506f736e 
+#define FIELD_VELC 0x56656c63
+#define FIELD_PTID 0x50746964
+#define FIELD_UNSF 0x556e7366
+#define FIELD_UNSI 0x556e7369
+
+#define ALGO_TRIM 0x5472696d
+#define ALGO_DIFF 0x44696666
+#define ALGO_COIL 0x436f696c
+#define ALGO_OCTO 0x4f63746f
+#define ALGO_SORT 0x536f7274
+#define ALGO_CART 0x43617274
+
 /* YOLO strats: redo everything. */
 
 /* The Accuracy type is how the user specifies how accurately Shellfish needs
@@ -14,6 +27,7 @@
 typedef void *Accuracy;
 
 typedef struct FloatAccuracy {
+    uint32_t FieldCode; /* Must be first. = FIELD_UNSF */
     float *Deltas; /* NULL, if Len = 0. */
     float Delta;
     float SymLogThreshold; /* Only meaningful is LogScaled = 2 */
@@ -23,13 +37,19 @@ typedef struct FloatAccuracy {
                           2 = symlog10 scaled */
 } FloatAccuracy;
 
+typedef struct IntAccuracy {
+    uint32_t FieldCode;
+} IntAccuracy;
+
 typedef struct PositionAccuracy {
+    uint32_t FieldCode; /* Must be first. */
     float *Deltas; /* NULL, if Len = 0. */
     float Delta, BoxWidth;
     int32_t Len;
 } PositionAccuracy;
 
 typedef struct VelocityAccuracy {
+    uint32_t FieldCode; /* Must be first. */
     float *Deltas; /* NULL, if Len = 0. */
     float Delta;
     int32_t Len;
@@ -39,6 +59,7 @@ typedef struct VelocityAccuracy {
 } VelocityAccuracy;
 
 typedef struct IDAccuracy {
+    uint32_t FieldCode; /* Must be first. */
     uint64_t Width;
 } IDAccuracy;
 
@@ -54,21 +75,30 @@ typedef void *Quantization;
  * to help with alignment). */
 typedef struct FloatQuantization {
     FloatAccuracy Acc;
+    uint64_t NaNFlag;
     float Offset;
 } FloatQuantization;
 
+typedef struct IntQuantization {
+    IntAccuracy Acc;
+    uint64_t Offset;
+}
+
 typedef struct PositionQuantization {
     PositionAccuracy Acc;
+    uint64_t NaNFlag;
     float Offset[3];
 } PositionQuantization;
 
 typedef struct VelocityQuantization {
     VelocityAccuracy Acc;
+    uint64_t NaNFlag;
     float Offset[3];
 } VelocityQuantization;
 
 typedef struct IDQuantization {
     IDAccuracy Acc;
+    uint64_t NaNFlag;
     uint64_t Offset[3];
 } IDQuantization;
 
@@ -97,7 +127,7 @@ typedef struct CField {
     FieldHeader Hd;
     uint32_t Checksum;
     int32_t DataLen;
-    uint8_t *Data;
+    uint8_t *Data; /* Quantization is also stored here. */
 } CField;
 
 /* Compressors and Decompressors */
@@ -109,7 +139,9 @@ typedef CField (*CFunc)(QField, void*);
 typedef struct Decompressor {
     void *Buffer;
     DFunc DFunc;
-    uint64_t NaNFlag;
+    uint64_t NaNFlag; /* If NaNFlag == 0, it's assumed that the decompressor
+                       * cannot paritally recover and all values will just be
+                       * set to NaN on checksum failure. */
 } Decompressor;
 
 typedef struct Compressor {
@@ -126,13 +158,11 @@ typedef struct Seg {
 
 typedef struct QSeg {
     QField *Fields;
-    Compressor *Compressors;
     int32_t FieldLen;
 } QSeg;
 
 typedef struct CSeg {
     CField *Fields;
-    Decompressor *Decompressors;
     int32_t FieldLen;
 } CSeg;
 
