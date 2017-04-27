@@ -8,7 +8,7 @@
 
 #include "algo.h"
 #include "debug.h"
-#include "compress_util.h"
+#include "util.h"
     
 /************************/
 /* Forward Declarations */

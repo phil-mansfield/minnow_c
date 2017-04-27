@@ -1,4 +1,4 @@
-#include "compress_util.h"
+#include "util.h"
 #include "debug.h"
 #include "lz4.h"
 #include <stdio.h>

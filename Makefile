@@ -61,7 +61,7 @@ LIBRARIES=
 # Flags of libraries being used.
 LIBRARY_FLAGS=-lm
 # Location of .h files which should be included.
-INCLUDES=
+INCLUDES=lz4/
 
 ifneq ($(INCLUDES),)
 	INCLUDES_WITH_FLAG=-I $(INCLUDES)

@@ -37,8 +37,14 @@ ExSeq ExSeq_Empty();
 /* `ExSeq` creates a new `Example` sequence with length `len`. */
 ExSeq ExSeq_New(int32_t len);
 
-/* `ExSeq_FromArray` creates an example array from an existing array. */
+/* `ExSeq_FromArray` creates an `Example` sequeence from an existing array. */
 ExSeq ExSeq_FromArray(Example *data, int32_t len);
+
+/* ExSeq_WrapArray returns an `Example` sequence that points to an existing
+ . array without performing additional allocations. Appending and Joining can
+ . only be done on the new sequence if the input array directly corresponds to
+ . a block requested by malloc and isn't a sub array of any type. */
+ExSeq ExSeq_WrapArray(Example *data, int32_t len);
 
 /* `ExSeq_NewWithCap` creates a new `Example` seqeunce with length `len` and
  . a capsize of `cap`. */
@@ -80,6 +86,12 @@ ExBigSeq ExBigSeq_New(int64_t len);
 /* `ExBigSeq_FromArray` creates an example array from an existing array. */
 ExBigSeq ExBigSeq_FromArray(Example *data, int64_t len);
 
+/* ExBigSeq_WrapArray returns an `Example` sequence that points to an existing
+ . array without performing additional allocations. Appending and Joining can
+ . only be done on the new sequence if the input array directly corresponds to
+ . a block requested by malloc and isn't a sub array of any type. */
+ExBigSeq ExBigSeq_WrapArray(Example *data, int64_t len);
+
 /* `ExBigSeq_NewWithCap` creates a new `Example` seqeunce with length `len` and
  . a capsize of `cap`. */
 ExBigSeq ExBigSeq_NewWithCap(int64_t len, int64_t cap);
@@ -117,6 +129,7 @@ ExBigSeq ExBigSeq_Extend(ExBigSeq s, int64_t n);
     seqType seqType##_Empty(); \
     seqType seqType##_New(int32_t len); \
     seqType seqType##_FromArray(type *data, int32_t len); \
+    seqType seqType##_WrapArray(type *data, int32_t len); \
     seqType seqType##_NewWithCap(int32_t len, int32_t cap); \
     void seqType##_Free(seqType s); \
     seqType seqType##_Append(seqType s, type tail); \
@@ -130,6 +143,7 @@ ExBigSeq ExBigSeq_Extend(ExBigSeq s, int64_t n);
     bigSeqType bigSeqType##_Empty(); \
     bigSeqType bigSeqType##_New(int64_t len); \
     bigSeqType bigSeqType##_FromArray(type *data, int64_t len); \
+    bigSeqType bigSeqType##_WrapArray(type *data, int64_t len); \
     bigSeqType bigSeqType##_NewWithCap(int64_t len, int64_t cap); \
     void bigSeqType##_Free(bigSeqType s); \
     bigSeqType bigSeqType##_Append(bigSeqType s, type tail); \

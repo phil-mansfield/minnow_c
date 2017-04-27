@@ -82,7 +82,7 @@ typedef struct FloatQuantization {
 typedef struct IntQuantization {
     IntAccuracy Acc;
     uint64_t Offset;
-}
+} IntQuantization;
 
 typedef struct PositionQuantization {
     PositionAccuracy Acc;
@@ -134,6 +134,7 @@ typedef struct CField {
 
 /* Second argument is an algorithm-dependent buffer. */
 typedef QField (*DFunc)(CField, void*);
+/* CFunc will not compute the checksum. */
 typedef CField (*CFunc)(QField, void*);
 
 typedef struct Decompressor {

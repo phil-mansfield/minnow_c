@@ -37,8 +37,14 @@ ExSeq ExSeq_Empty();
 /* `ExSeq` creates a new `Example` sequence with length `len`. */
 ExSeq ExSeq_New(int32_t len);
 
-/* `ExSeq_FromArray` creates an example array from an existing array. */
+/* `ExSeq_FromArray` creates an `Example` sequeence from an existing array. */
 ExSeq ExSeq_FromArray(Example *data, int32_t len);
+
+/* ExSeq_WrapArray returns an `Example` sequence that points to an existing
+ . array without performing additional allocations. Appending and Joining can
+ . only be done on the new sequence if the input array directly corresponds to
+ . a block requested by malloc and isn't a sub array of any type. */
+ExSeq ExSeq_WrapArray(Example *data, int32_t len);
 
 /* `ExSeq_NewWithCap` creates a new `Example` seqeunce with length `len` and
  . a capsize of `cap`. */
@@ -79,6 +85,12 @@ ExBigSeq ExBigSeq_New(int64_t len);
 
 /* `ExBigSeq_FromArray` creates an example array from an existing array. */
 ExBigSeq ExBigSeq_FromArray(Example *data, int64_t len);
+
+/* ExBigSeq_WrapArray returns an `Example` sequence that points to an existing
+ . array without performing additional allocations. Appending and Joining can
+ . only be done on the new sequence if the input array directly corresponds to
+ . a block requested by malloc and isn't a sub array of any type. */
+ExBigSeq ExBigSeq_WrapArray(Example *data, int64_t len);
 
 /* `ExBigSeq_NewWithCap` creates a new `Example` seqeunce with length `len` and
  . a capsize of `cap`. */
