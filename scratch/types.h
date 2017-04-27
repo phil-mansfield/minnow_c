@@ -5,18 +5,18 @@
 #include <string.h>
 #include <stdint.h>
 
-#define FIELD_POSN 0x506f736e 
-#define FIELD_VELC 0x56656c63
-#define FIELD_PTID 0x50746964
-#define FIELD_UNSF 0x556e7366
-#define FIELD_UNSI 0x556e7369
+#define field_Posn 0x506f736e 
+#define field_Velc 0x56656c63
+#define field_Ptid 0x50746964
+#define field_Unsf 0x556e7366
+#define field_Unsi 0x556e7369
 
-#define ALGO_TRIM 0x5472696d
-#define ALGO_DIFF 0x44696666
-#define ALGO_COIL 0x436f696c
-#define ALGO_OCTO 0x4f63746f
-#define ALGO_SORT 0x536f7274
-#define ALGO_CART 0x43617274
+#define algo_Trim 0x5472696d
+#define algo_Diff 0x44696666
+#define algo_Coil 0x436f696c
+#define algo_Octo 0x4f63746f
+#define algo_Sort 0x536f7274
+#define alog_Cart 0x43617274
 
 /* YOLO strats: redo everything. */
 
@@ -27,7 +27,6 @@
 typedef void *Accuracy;
 
 typedef struct FloatAccuracy {
-    uint32_t FieldCode; /* Must be first. = FIELD_UNSF */
     float *Deltas; /* NULL, if Len = 0. */
     float Delta;
     float SymLogThreshold; /* Only meaningful is LogScaled = 2 */
@@ -37,19 +36,15 @@ typedef struct FloatAccuracy {
                           2 = symlog10 scaled */
 } FloatAccuracy;
 
-typedef struct IntAccuracy {
-    uint32_t FieldCode;
-} IntAccuracy;
+typedef uint8_t IntAccuracy; /* Does nothing. */
 
 typedef struct PositionAccuracy {
-    uint32_t FieldCode; /* Must be first. */
     float *Deltas; /* NULL, if Len = 0. */
     float Delta, BoxWidth;
     int32_t Len;
 } PositionAccuracy;
 
 typedef struct VelocityAccuracy {
-    uint32_t FieldCode; /* Must be first. */
     float *Deltas; /* NULL, if Len = 0. */
     float Delta;
     int32_t Len;
@@ -59,7 +54,6 @@ typedef struct VelocityAccuracy {
 } VelocityAccuracy;
 
 typedef struct IDAccuracy {
-    uint32_t FieldCode; /* Must be first. */
     uint64_t Width;
 } IDAccuracy;
 
@@ -76,30 +70,30 @@ typedef void *Quantization;
 typedef struct FloatQuantization {
     FloatAccuracy Acc;
     uint64_t NaNFlag;
-    float Offset;
+    float X0, X1;
 } FloatQuantization;
 
 typedef struct IntQuantization {
     IntAccuracy Acc;
-    uint64_t Offset;
+    uint64_t X0, X1;
 } IntQuantization;
 
 typedef struct PositionQuantization {
     PositionAccuracy Acc;
     uint64_t NaNFlag;
-    float Offset[3];
+    float X0[3], X1[3];
 } PositionQuantization;
 
 typedef struct VelocityQuantization {
     VelocityAccuracy Acc;
     uint64_t NaNFlag;
-    float Offset[3];
+    float X0[3], X1[3];
 } VelocityQuantization;
 
 typedef struct IDQuantization {
     IDAccuracy Acc;
     uint64_t NaNFlag;
-    uint64_t Offset[3];
+    uint64_t X0[3], X1[3];
 } IDQuantization;
 
 /* Fields */
