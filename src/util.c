@@ -471,6 +471,49 @@ int32_t util_I32UndoLittleEndian(int32_t x)  {
     return util_I32LittleEndian(x);
 }
 
+uint64_t util_U64LittleEndian(uint64_t x) {
+    if (littleEndian()) { return x; }
+
+    uint64_t x0 = x & 0xff;
+    uint64_t x1 = (x >> 8) & 0xff;
+    uint64_t x2 = (x >> 16) & 0xff;
+    uint64_t x3 = (x >> 24) & 0xff;
+    uint64_t x4 = (x >> 32) & 0xff;
+    uint64_t x5 = (x >> 40) & 0xff;
+    uint64_t x6 = (x >> 48) & 0xff;
+    uint64_t x7 = (x >> 56) & 0xff;
+    
+    return (x0 << 56) + (x1 << 48) + (x2 << 40) + (x3 << 32) +
+        (x4 << 24) + (x5 << 16) + (x6 << 8) + x7;
+}
+
+int64_t util_I64LittleEndian(int64_t x) {
+    if (littleEndian()) { return x; }
+    uint64_t u = *(uint64_t*)(&x);
+    u = util_U64LittleEndian(u);
+    return *(int64_t*)(&u);
+}
+
+uint64_t util_U64UndoLittleEndian(uint64_t x) {
+    return util_U64LittleEndian(x);
+}
+
+int64_t util_I64UndoLittleEndian(int64_t x)  {
+    return util_I64LittleEndian(x);
+}
+
+float util_FLittleEndian(float x) {
+    if (littleEndian()) { return x; }
+    uint32_t u = *(uint32_t*)(&x);
+    u = util_U32LittleEndian(u);
+    return *(float*)(&u);
+}
+
+float util_FUndoLittleEndian(float x)  {
+    return util_FLittleEndian(x);
+}
+
+
 /********************/
 /* Helper Functions */
 /********************/
@@ -502,35 +545,4 @@ bool littleEndian() {
     int test = 1;
     return *(char*)&test == 1;
 #endif
-}
-
-void U32EndianSwap(U32Seq x) {
-    for (int32_t i = 0; i < x.Len; i++) {
-        uint32_t val = x.Data[i];
-
-        uint32_t x0 = val & 0xff;
-        uint32_t x1 = (val >> 8) & 0xff;
-        uint32_t x2 = (val >> 16) & 0xff;
-        uint32_t x3 = (val >> 24) & 0xff;
-
-        x.Data[i] = (x0 << 24) + (x1 << 16) + (x2 << 8) + x3;
-    }
-}
-
-void U64EndianSwap(U64Seq x) {
-    for (int32_t i = 0; i < x.Len; i++) {
-        uint64_t val = x.Data[i];
-
-        uint64_t x0 = val & 0xff;
-        uint64_t x1 = (val >> 8) & 0xff;
-        uint64_t x2 = (val >> 16) & 0xff;
-        uint64_t x3 = (val >> 24) & 0xff;
-        uint64_t x4 = (val >> 32) & 0xff;
-        uint64_t x5 = (val >> 40) & 0xff;
-        uint64_t x6 = (val >> 48) & 0xff;
-        uint64_t x7 = (val >> 56) & 0xff;
-
-        x.Data[i] = (x0 << 56) + (x1 << 48) + (x2 << 40) + (x3 << 32) +
-            (x4 << 24) + (x5 << 16) + (x6 << 8) + x7;
-    }
 }

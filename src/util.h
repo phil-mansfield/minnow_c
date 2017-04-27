@@ -122,7 +122,17 @@ uint32_t util_Checksum(U8Seq bytes);
 uint32_t util_U32LittleEndian(uint32_t x);
 int32_t util_I32LittleEndian(int32_t x);
 
+uint64_t util_U64LittleEndian(uint64_t x);
+int64_t util_I64LittleEndian(int64_t x);
+
+float util_FLittleEndian(float x);
+
 uint32_t util_U32UndoLittleEndian(uint32_t x);
 int32_t util_I32UndoLittleEndian(int32_t x);
+
+uint64_t util_U64UndoLittleEndian(uint64_t x);
+int64_t util_I64UndoLittleEndian(int64_t x);
+
+float util_FUndoLittleEndian(float x);
 
 #endif /* MNW_COMPRESS_UTIL_H_ */
