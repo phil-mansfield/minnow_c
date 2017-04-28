@@ -120,9 +120,9 @@ typedef struct QField {
 
 typedef struct CField {
     FieldHeader Hd;
-    uint32_t Checksum;
-    int32_t DataLen;
     uint8_t *Data; /* Quantization is also stored here. */
+    int64_t DataLen;
+    uint32_t Checksum;
 } CField;
 
 /* Compressors and Decompressors */

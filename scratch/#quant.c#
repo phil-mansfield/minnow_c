@@ -36,6 +36,8 @@ Field quant_Field(QField qf) {
     }
 }
 
+void quant
+
 QField quant_Position(Field f) {
     (void) f;
     

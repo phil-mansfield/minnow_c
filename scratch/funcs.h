@@ -4,14 +4,13 @@
 #include "types.h"
 #include "../src/seq.h"
 
-/* TODO: functions for freeing data. */
+/* TODO: Figure out whether or not vectorization here is the
+ * corect API choice. */
+Decompressor *LoadDecompressors(CSeg cs);
+void FreeDecompressors(CSeg cs, Decompressor *decomps);
 
-/* TODO: Figure out whether or not vectorization here is corect. */
-Decompressor *LoadDecompressors(CSeg cs, Register reg);
-void FreeDecompressors(CSeg cs, Register reg, Decompressor *decomps);
-
-Compressor *LoadCompressors(Seg qs, Register reg);
-void FreeCompressors(Seg s, Register reg, Compressor *comps);
+Compressor *LoadCompressors(Seg qs);
+void FreeCompressors(Seg s, Compressor *comps);
 
 QSeg Quantize(Seg s);
 Seg UndoQuantize(QSeg qs);
@@ -21,5 +20,11 @@ CSeg Compress(QSeg qs, Compressor *comps);
 
 U8BigSeq ToBytes(CSeg cs);
 CSeg FromBytes(U8BigSeq bytes);
+
+/* Note that Seg_Free will not free your data arrays. */
+void Seg_Free(Seg s);
+void QSeg_Free(QSeg qs);
+void CSeg_Free(CSeg cs);
+
 
 #endif
