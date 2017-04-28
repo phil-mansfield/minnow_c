@@ -10,39 +10,68 @@ Register Register_New(void) {
 void Register_Free(Register reg) {
     U32Seq_Free(reg.Algo);
     for (int32_t i = 0; i < reg.Version.Len; i++) {
-        U32Seq_Free(reg.Version.Data[i]);
-        PtrSeq_Free(reg.DFunc.Data[i]);
-        PtrSeq_Free(reg.CFunc.Data[i]);
+        int32_t len = reg.Funcs.Data[i].Len;
+        void **ptrs = reg.Funcs.Data[i].Data;
+        for (int32_t j = 0; j < len; j++) free(ptrs[j]);
+        PtrSeq_Free(reg.Funcs.Data[i]);
     }
     U32SeqSeq_Free(reg.Version);
-    PtrSeqSeq_Free(reg.DFunc);
-    PtrSeqSeq_Free(reg.CFunc);
+    PtrSeqSeq_Free(reg.Funcs);
 }
 
 void Register_Add(
-    Register reg, uint32_t algo, uint32_t version, CFunc cf, DFunc df
+    Register reg, uint32_t algo, uint32_t version, RegisterFuncs funcs
 ) {
     (void) reg;
     (void) algo;
     (void) version;
-    (void) cf;
-    (void) df;
-    
+    (void) funcs;
 }
 
-void Register_Get(
-    Register reg, uint32_t algo, uint32_t version, CFunc *cf, DFunc *df
+Decompressor Register_GetDecompressor(
+    Register reg, uint32_t algo, uint32_t version
 ) {
     (void) reg;
     (void) algo;
     (void) version;
-    (void) cf;
-    (void) df;
+
+    Decompressor dummy;
+    return dummy;
 }
 
-bool Register_Supports(Register reg, uint32_t algo) {
+Compressor Register_GetCompressor(
+    Register reg, uint32_t algo, uint32_t version
+) {
     (void) reg;
     (void) algo;
+    (void) version;
+
+    Compressor dummy;
+    return dummy;
+}
+
+void Register_FreeDecompressor(
+    Register reg, uint32_t algo, uint32_t version, Decompressor decomp
+) {
+    (void) reg;
+    (void) algo;
+    (void) version;
+    (void) decomp;
+}
+
+void Register_FreeCompressor(
+    Register reg, uint32_t algo, uint32_t version, Compressor comp
+) {
+    (void) reg;
+    (void) algo;
+    (void) version;
+    (void) comp;
+}
+
+bool Register_Supports(Register reg, uint32_t algo, uint32_t version) {
+    (void) reg;
+    (void) algo;
+    (void) version;
 
     return false;
 }
