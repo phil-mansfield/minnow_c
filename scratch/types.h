@@ -11,6 +11,7 @@
 #define field_Unsf 0x556e7366
 #define field_Unsi 0x556e7369
 
+#define algo_Test 0x5472696d
 #define algo_Trim 0x5472696d
 #define algo_Diff 0x44696666
 #define algo_Coil 0x436f696c
