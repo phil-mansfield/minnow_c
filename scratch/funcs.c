@@ -9,6 +9,8 @@
 #include "../src/stream.h"
 #include "../src/semver.h"
 
+/* TODO: functions for freeing data. */
+
 /* For now we're going to take the perspective that buffers are for nerds. */
 
 Decompressor *LoadDecompressors(CSeg cs, Register reg) {
@@ -223,9 +225,9 @@ CSeg FromBytes(U8BigSeq bytes) {
     return cs;
 }
 
-int main() {
-
-    float *x = NULL;
+Seg getSegment(Register reg);
+Seg getSegment(Register reg) {
+   float *x = NULL;
     float *v = NULL;
     uint64_t *id = NULL;
     int32_t len = 0;
@@ -234,36 +236,67 @@ int main() {
     s.FieldLen = 3;
     s.Fields = calloc(3, sizeof(s.Fields[0]));
 
+    /* Position intialization. */
+
+    FieldHeader xHd = { .FieldCode = field_Posn, .AlgoCode = algo_Test,
+                        .AlgoVersion = Register_Newest(reg, algo_Test),
+                        .ParticleLen = len };
+    s.Fields[0].Hd = xHd;
+    s.Fields[0].Data = x;
+    PositionAccuracy xAcc = { .Deltas = NULL, .Delta = (float) 1e-3,
+                              .BoxWidth = 64, .Len = 0 };
+    s.Fields[0].Acc = calloc(1, sizeof(xAcc));
+    *(PositionAccuracy*)s.Fields[0].Acc = xAcc;
+
+    /* Velocity */
+
+    FieldHeader vHd = { .FieldCode = field_Velc, .AlgoCode = algo_Test,
+                        .AlgoVersion = Register_Newest(reg, algo_Test),
+                        .ParticleLen = len };
+    s.Fields[0].Hd = vHd;
+    s.Fields[0].Data = v;
+    VelocityAccuracy vAcc = { .Deltas = NULL, .Delta = 1,
+                              .Len = 0, .SymLogThreshold = false };
+    s.Fields[1].Acc = calloc(1, sizeof(vAcc));
+    *(VelocityAccuracy*)s.Fields[1].Acc = vAcc;
+
+    /* ID */
+
+    FieldHeader idHd = { .FieldCode = field_Ptid, .AlgoCode = algo_Test,
+                         .AlgoVersion = Register_Newest(reg, algo_Test),
+                         .ParticleLen = len };
+    s.Fields[2].Hd = idHd;
+    s.Fields[2].Data = id;
+    IDAccuracy idAcc = { .Width = 1024 };
+    s.Fields[2].Acc = calloc(1, sizeof(idAcc));
+    *(IDAccuracy*)s.Fields[2].Acc = idAcc;
+
+    return s;
+}
+
+int main() {
+    /* Specify data. */
+
     Register reg = Register_New();
+    Seg s = getSegment(reg);
 
-    FieldHeader xHd = {
-        .FieldCode = field_Posn,
-        .AlgoCode = algo_Test,
-        .AlgoVersion = Register_Newest(reg, algo_Test),
-        .ParticleLen = len
-    };
+    /* Compress */
 
-    FieldHeader vHd = {
-        .FieldCode = field_Velc,
-        .AlgoCode = algo_Test,
-        .AlgoVersion = Register_Newest(reg, algo_Test),
-        .ParticleLen = len
-    };
+    QSeg qs = Quantize(s);
+    Compressor *comps = LoadCompressors(s, reg);
+    CSeg cs = Compress(qs, comps);
+    U8BigSeq bytes = ToBytes(cs);
 
-    FieldHeader idHd = {
-        .FieldCode = field_Ptid,
-        .AlgoCode = algo_Test,
-        /* Example of a more specific intialization. */
-        .AlgoVersion = semver_FromString("0.9.0-dev"),
-        .ParticleLen = len
-    };
+    /* Do whatever you want with bytes. */
+    
+    cs = FromBytes(bytes);
+    Decompressor *decomps = LoadDecompressors(cs, reg);
+    qs = Decompress(cs, decomps);
+    s = UndoQuantize(qs);
 
-    (void) xHd;
-    (void) vHd;
-    (void) idHd;
-    (void) x;
-    (void) v;
-    (void) id;
+    /* Clean up */
 
+    FreeCompressors(s, reg, comps);
+    FreeDecompressors(cs, reg, decomps);
     Register_Free(reg);
 }

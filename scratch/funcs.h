@@ -4,6 +4,8 @@
 #include "types.h"
 #include "../src/seq.h"
 
+/* TODO: functions for freeing data. */
+
 /* TODO: Figure out whether or not vectorization here is corect. */
 Decompressor *LoadDecompressors(CSeg cs, Register reg);
 void FreeDecompressors(CSeg cs, Register reg, Decompressor *decomps);
