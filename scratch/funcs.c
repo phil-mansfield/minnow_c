@@ -7,9 +7,71 @@
 #include "../src/debug.h"
 #include "../src/util.h"
 #include "../src/stream.h"
+#include "../src/semver.h"
 
 /* For now we're going to take the perspective that buffers are for nerds. */
 
+Decompressor *LoadDecompressors(CSeg cs, Register reg) {
+    Decompressor *decomps = calloc((size_t) cs.FieldLen, sizeof(decomps[0]));
+
+    for (int32_t i = 0; i < cs.FieldLen; i++) {
+        uint32_t algo = cs.Fields[i].Hd.AlgoCode;
+        uint32_t version = cs.Fields[i].Hd.AlgoVersion;
+
+        if (!Register_Supports(reg, algo, version)) {
+            /* TODO: Improve this error message. */
+            char versionStr[semver_BUF_SIZE];
+            semver_ToString(version, versionStr);
+            Panic("Version %s of algorithm %x is not supported.",
+                  versionStr, algo);
+        }
+
+        decomps[i] = Register_GetDecompressor(reg, algo, version);
+    }
+
+    return decomps;
+}
+
+Compressor *LoadCompressors(Seg s, Register reg) {
+    Compressor *comps = calloc((size_t) s.FieldLen, sizeof(comps[0]));
+
+    for (int32_t i = 0; i < s.FieldLen; i++) {
+        uint32_t algo = s.Fields[i].Hd.AlgoCode;
+        uint32_t version = s.Fields[i].Hd.AlgoVersion;
+
+        if (!Register_Supports(reg, algo, version)) {
+            /* TODO: Improve this error message. */
+            char versionStr[semver_BUF_SIZE];
+            semver_ToString(version, versionStr);
+            Panic("Version %s of algorithm %x is not supported.",
+                  versionStr, algo);
+        }
+
+        comps[i] = Register_GetCompressor(reg, algo, version);
+    }
+
+    return comps;
+}
+
+void FreeDecompressors(CSeg cs, Register reg, Decompressor *decomps) {
+    for (int32_t i = 0; i < cs.FieldLen; i++) {
+        uint32_t algo = cs.Fields[i].Hd.AlgoCode;
+        uint32_t version = cs.Fields[i].Hd.AlgoVersion;
+        Register_FreeDecompressor(reg, algo, version, decomps[i]);
+    }
+
+    free(decomps);
+}
+
+void FreeCompressors(Seg s, Register reg, Compressor *comps) {
+    for (int32_t i = 0; i < s.FieldLen; i++) {
+        uint32_t algo = s.Fields[i].Hd.AlgoCode;
+        uint32_t version = s.Fields[i].Hd.AlgoVersion;
+        Register_FreeCompressor(reg, algo, version, comps[i]);
+    }
+
+    free(comps);
+}
 
 QSeg Quantize(Seg s) {
     QSeg qs;
@@ -162,5 +224,46 @@ CSeg FromBytes(U8BigSeq bytes) {
 }
 
 int main() {
-    return 0;
+
+    float *x = NULL;
+    float *v = NULL;
+    uint64_t *id = NULL;
+    int32_t len = 0;
+
+    Seg s;
+    s.FieldLen = 3;
+    s.Fields = calloc(3, sizeof(s.Fields[0]));
+
+    Register reg = Register_New();
+
+    FieldHeader xHd = {
+        .FieldCode = field_Posn,
+        .AlgoCode = algo_Test,
+        .AlgoVersion = Register_Newest(reg, algo_Test),
+        .ParticleLen = len
+    };
+
+    FieldHeader vHd = {
+        .FieldCode = field_Velc,
+        .AlgoCode = algo_Test,
+        .AlgoVersion = Register_Newest(reg, algo_Test),
+        .ParticleLen = len
+    };
+
+    FieldHeader idHd = {
+        .FieldCode = field_Ptid,
+        .AlgoCode = algo_Test,
+        /* Example of a more specific intialization. */
+        .AlgoVersion = semver_FromString("0.9.0-dev"),
+        .ParticleLen = len
+    };
+
+    (void) xHd;
+    (void) vHd;
+    (void) idHd;
+    (void) x;
+    (void) v;
+    (void) id;
+
+    Register_Free(reg);
 }

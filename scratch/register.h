@@ -15,10 +15,10 @@ typedef struct Register {
 typedef struct RegisterFuncs {
     CFunc CFunc;
     void *(*CAlloc)(void);
-    void *(*CFree)(void);
+    void (*CFree)(void *);
     DFunc DFunc;
     void *(*DAlloc)(void);
-    void *(*DFree)(void);
+    void (*DFree)(void *);
 } RegisterFuncs;
 
 Register Register_New(void);
