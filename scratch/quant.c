@@ -122,8 +122,36 @@ QField quant_Int(Field f) {
 }
 
 Field quant_UndoInt(QField qf) {
-    (void) qf;
+    /* Set things up. */
+    Field f;
+    memset(&f, 0, sizeof(f));
+    memcpy(&f.Hd, &qf.Hd, sizeof(f.Hd));
+
+    if (!qf.Data) {
+        /* Deal with completely invalid data. */
+        uint64_t *x = malloc(sizeof(uint64_t) * (size_t) f.Hd.ParticleLen);
+        memset(x, 0xff, sizeof(uint64_t) * (size_t) f.Hd.ParticleLen);
+        f.Data = x;
+        return f;
+    }
     
-    Field dummy;
-    return dummy;
+    /* Dequantize data. */
+
+    IntQuantization quant = *(IntQuantization*)qf.Quant;
+    uint64_t *qdata = (uint64_t*)qf.Data;
+    uint64_t *data = malloc(sizeof(uint64_t) * (size_t) f.Hd.ParticleLen);
+
+    memcpy(data, qdata, sizeof(uint64_t) * (size_t) f.Hd.ParticleLen);
+    for (int32_t i = 0; i < f.Hd.ParticleLen; i++) { data[i] += quant.X0; }
+
+    /* No need to set Acc. */
+
+    /* Deal with partially invalid data. */
+
+    for (int32_t i = 0; i < f.Hd.ParticleLen; i++) {
+        if (qdata[i] == quant.NaNFlag) { data[i] = 0xffffffffffffffff; }
+    }
+
+    f.Data = data;
+    return f;
 }
