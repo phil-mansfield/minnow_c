@@ -185,17 +185,23 @@ void FreeCompressors(Seg s, Compressor *comps) {
 
 /* Note: this function will not free your data arrays. */
 void Seg_Free(Seg s) {
-    for (int32_t i = 0; i < s.FieldLen; i++) { quant_FreeField(s.Fields[i]); }
+    for (int32_t i = 0; i < s.FieldLen; i++) {
+        quant_FreeField(s.Fields[i]);
+    }
     free(s.Fields);
 }
 
 void QSeg_Free(QSeg qs) {
-    for (int32_t i = 0; i < s.FieldLen; i++) { quant_FreeQField(qs.Fields[i]); }
+    for (int32_t i = 0; i < qs.FieldLen; i++) {
+        quant_FreeQField(qs.Fields[i]);
+    }
     free(qs.Fields);
 }
 
 void CSeg_Free(CSeg cs) {
-    for (int32_t i = 0; i < s.FieldLen; i++) { free(qs.Fields[i].Data); }
+    for (int32_t i = 0; i < cs.FieldLen; i++) {
+        free(cs.Fields[i].Data);
+    }
     free(cs.Fields);
 }
 

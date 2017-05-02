@@ -14,6 +14,28 @@ Field quant_UndoFloat(QField qf);
 QField quant_Int(Field f);
 Field quant_UndoInt(QField qf);
 
+void quant_FreeQField(QField qf) {
+    switch(qf.Hd.FieldCode) {
+    case field_Posn: break;
+    case field_Velc: break;
+    case field_Ptid: break;
+    case field_Unsf: break;
+    case field_Unsi: break;
+    default: Panic("Unrecognized field code %"PRIx32".", qf.Hd.FieldCode);
+    }
+}
+
+void quant_FreeField(Field f) {
+    switch(f.Hd.FieldCode) {
+    case field_Posn: break;
+    case field_Velc: break;
+    case field_Ptid: break;
+    case field_Unsf: break;
+    case field_Unsi: break;
+    default: Panic("Unrecognized field code %"PRIx32".", f.Hd.FieldCode);
+    }
+}
+
 QField quant_QField(Field f) {
     switch(f.Hd.FieldCode) {
     case field_Posn: return quant_Position(f);

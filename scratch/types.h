@@ -69,31 +69,35 @@ typedef void *Quantization;
  * has the freedom to change Acc.Delta and Acc.Deltas to smaller values (e.g.
  * to help with alignment). */
 typedef struct FloatQuantization {
-    FloatAccuracy Acc;
+    uint8_t *Depths;
+    uint8_t Depth;
+    int32_t Len;
     uint64_t NaNFlag;
     float X0, X1;
 } FloatQuantization;
 
 typedef struct IntQuantization {
-    IntAccuracy Acc;
-    uint64_t X0, X1;
+    uint64_t NaNFlag, X0, X1;
 } IntQuantization;
 
 typedef struct PositionQuantization {
-    PositionAccuracy Acc;
+    uint8_t *Depths;
+    uint8_t Depth;
+    int32_t Len;
     uint64_t NaNFlag;
     float X0[3], X1[3];
 } PositionQuantization;
 
 typedef struct VelocityQuantization {
-    VelocityAccuracy Acc;
+    uint8_t *Depths;
+    uint8_t Depth;
+    int32_t Len;
     uint64_t NaNFlag;
     float X0[3], X1[3];
 } VelocityQuantization;
 
 typedef struct IDQuantization {
-    IDAccuracy Acc;
-    uint64_t NaNFlag;
+    uint64_t NaNFlag, Width;
     uint64_t X0[3], X1[3];
 } IDQuantization;
 

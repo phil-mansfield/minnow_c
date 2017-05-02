@@ -6,6 +6,6 @@
 Field quant_Field(QField qf);
 QField quant_QField(Field f);
 void quant_FreeQField(QField qf);
-void quant_FreeField(QField f);
+void quant_FreeField(Field f);
 
 #endif
