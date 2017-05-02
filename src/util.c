@@ -435,10 +435,9 @@ U8Seq util_UndoEntropyEncode(
     return buf;
 }
 
-uint32_t util_Checksum(U8Seq bytes) {
+uint32_t util_Checksum(U8BigSeq bytes) {
     uint32_t checksum = 1;
-    for (int32_t i = 0; i < bytes.Len; i++) {
-        // BSD implements this with a conditional, but that's crazy.
+    for (int64_t i = 0; i < bytes.Len; i++) {
         checksum = (checksum >> 1) + ((checksum & 1) << 31);
         checksum += (uint32_t) bytes.Data[i];
     }
