@@ -6,16 +6,16 @@
 #include "../src/debug.h"
 #include "../src/rand.h"
 
-QField quant_Position(Field f);
-Field quant_UndoPosition(QField qf);
-QField quant_Velocity(Field f);
-Field quant_UndoVelocity(QField qf);
-QField quant_ID(Field f);
-Field quant_UndoID(QField qf);
-QField quant_Float(Field f);
-Field quant_UndoFloat(QField qf);
-QField quant_Int(Field f);
-Field quant_UndoInt(QField qf);
+QField position(Field f);
+Field undoPosition(QField qf);
+QField velocity(Field f);
+Field undoVelocity(QField qf);
+QField id(Field f);
+Field undoID(QField qf);
+QField ufloat(Field f);
+Field undoUfloat(QField qf);
+QField uint(Field f);
+Field undoUint(QField qf);
 
 void undoLog10Float(
     float x0, float x1,
@@ -107,55 +107,55 @@ void quant_FreeField(Field f) {
 
 QField quant_QField(Field f) {
     switch(f.Hd.FieldCode) {
-    case field_Posn: return quant_Position(f);
-    case field_Velc: return quant_Velocity(f);
-    case field_Ptid: return quant_ID(f);
-    case field_Unsf: return quant_Float(f);
-    case field_Unsi: return quant_Int(f);
+    case field_Posn: return position(f);
+    case field_Velc: return velocity(f);
+    case field_Ptid: return id(f);
+    case field_Unsf: return ufloat(f);
+    case field_Unsi: return uint(f);
     default: Panic("Unrecognized field code %"PRIx32".", f.Hd.FieldCode);
     }
 }
 
 Field quant_Field(QField qf) {
     switch(qf.Hd.FieldCode) {
-    case field_Posn: return quant_UndoPosition(qf);
-    case field_Velc: return quant_UndoVelocity(qf);
-    case field_Ptid: return quant_UndoID(qf);
-    case field_Unsf: return quant_UndoFloat(qf);
-    case field_Unsi: return quant_UndoInt(qf);
+    case field_Posn: return undoPosition(qf);
+    case field_Velc: return undoVelocity(qf);
+    case field_Ptid: return undoID(qf);
+    case field_Unsf: return undoFloat(qf);
+    case field_Unsi: return undoInt(qf);
     default: Panic("Unrecognized field code %"PRIx32".", qf.Hd.FieldCode);
     }
 }
 
-QField quant_Position(Field f) {
+QField position(Field f) {
     (void) f;
     
     QField dummy;
     return dummy;
 }
 
-QField quant_Velocity(Field f) {
+QField velocity(Field f) {
     (void) f;
     
     QField dummy;
     return dummy;
 }
 
-QField quant_ID(Field f) {
+QField id(Field f) {
     (void) f;
     
     QField dummy;
     return dummy;
 }
 
-QField quant_Float(Field f) {
-    (void) f;
+QField ufloat(Field f) {
+    for (int)
     
     QField dummy;
     return dummy;
 }
 
-QField quant_Int(Field f) {
+QField uint(Field f) {
     (void) f;
     
     QField dummy;
@@ -164,7 +164,7 @@ QField quant_Int(Field f) {
 
 /* quant_Undo functions */
 
-Field quant_UndoFloat(QField qf) {
+Field undoUfloat(QField qf) {
     /* Set things up. */
     Field f;
     memset(&f, 0, sizeof(f));
@@ -233,7 +233,7 @@ Field quant_UndoFloat(QField qf) {
     return f;
 }
 
-Field quant_UndoPosition(QField qf) {
+Field undoPosition(QField qf) {
     /* Set things up. */
     Field f;
     memset(&f, 0, sizeof(f));
@@ -293,7 +293,7 @@ Field quant_UndoPosition(QField qf) {
     return f;
 }
 
-Field quant_UndoVelocity(QField qf) {
+Field undoVelocity(QField qf) {
     /* Set things up. */
     Field f;
     memset(&f, 0, sizeof(f));
@@ -363,7 +363,7 @@ Field quant_UndoVelocity(QField qf) {
     return f;
 }
 
-Field quant_UndoID(QField qf) {
+Field undoID(QField qf) {
     /* Set things up. */
     Field f;
     memset(&f, 0, sizeof(f));
@@ -412,7 +412,7 @@ Field quant_UndoID(QField qf) {
     return f;
 }
 
-Field quant_UndoInt(QField qf) {
+Field UndoUint(QField qf) {
     /* Set things up. */
     Field f;
     memset(&f, 0, sizeof(f));
