@@ -35,6 +35,19 @@ void undoFloat(
     uint64_t *qdata, float *buf, int32_t len
 );
 
+void setNaNs(
+    float *data, float *deltas,
+    uint64_t *qdata, uint64_t nanFlag,
+    int32_t len
+);
+
+void depthToDelta(
+    uint8_t depth, uint8_t *depths,
+    float x0, float x1,
+    float *deltaPtr, float**deltasPtr,
+    int32_t len
+);
+
 void quant_FreeQField(QField qf) {
     switch(qf.Hd.FieldCode) {
 
@@ -121,11 +134,13 @@ Field quant_Field(QField qf) {
     case field_Posn: return undoPosition(qf);
     case field_Velc: return undoVelocity(qf);
     case field_Ptid: return undoID(qf);
-    case field_Unsf: return undoFloat(qf);
-    case field_Unsi: return undoInt(qf);
+    case field_Unsf: return undoUfloat(qf);
+    case field_Unsi: return undoUint(qf);
     default: Panic("Unrecognized field code %"PRIx32".", qf.Hd.FieldCode);
     }
 }
+
+/* quantization funcitons */
 
 QField position(Field f) {
     (void) f;
@@ -149,20 +164,20 @@ QField id(Field f) {
 }
 
 QField ufloat(Field f) {
-    for (int)
-    
-    QField dummy;
-    return dummy;
-}
-
-QField uint(Field f) {
     (void) f;
     
     QField dummy;
     return dummy;
 }
 
-/* quant_Undo functions */
+QField uint(Field f) {    
+    (void) f;
+    
+    QField dummy;
+    return dummy;
+}
+
+/* dequantization functions */
 
 Field undoUfloat(QField qf) {
     /* Set things up. */
@@ -186,20 +201,17 @@ Field undoUfloat(QField qf) {
 
     if (quant.Log10Scaled == 1) {
         undoLog10Float(
-            quant.X0, quant.X1,
-            quant.Depth, quant.Depths,
+            quant.X0, quant.X1, quant.Depth, quant.Depths,
             qdata, data, f.Hd.ParticleLen
         );
     } else if (quant.Log10Scaled == 2) {
         undoSymLog10Float(
             quant.X0, quant.X1, quant.SymLog10Threshold,
-            quant.Depth, quant.Depths,
-            qdata, data, f.Hd.ParticleLen
+            quant.Depth, quant.Depths, qdata, data, f.Hd.ParticleLen
         );
     } else {
         undoFloat(
-            quant.X0, quant.X1,
-            quant.Depth, quant.Depths,
+            quant.X0, quant.X1, quant.Depth, quant.Depths,
             qdata, data, f.Hd.ParticleLen
         );
     }
@@ -211,25 +223,18 @@ Field undoUfloat(QField qf) {
     acc->SymLog10Threshold = quant.SymLog10Threshold;
     acc->Len = quant.Len;
     acc->Log10Scaled = quant.Log10Scaled;
-    if (!quant.Len) {
-        acc->Delta = (quant.X1 - quant.X0) / (float) (1 << quant.Depth);
-    } else {
-        acc->Deltas = calloc((size_t) f.Hd.ParticleLen, sizeof(*acc->Deltas));
-        for (int32_t i = 0; i < f.Hd.ParticleLen; i++) {
-            acc->Deltas[i] = (quant.X1 - quant.X0) /
-                (float) (1 << quant.Depths[i]);
-        }
-    }
+    depthToDelta(
+        quant.Depth, quant.Depths, quant.X0, quant.X1,
+        &acc->Delta, &acc->Deltas, f.Hd.ParticleLen
+    );
 
     f.Acc = acc;
     
     /* Deal with partially invalid data. */
 
-    for (int32_t i = 0; i < f.Hd.ParticleLen; i++) {
-        if (qdata[i] == quant.NaNFlag) { data[i] = NAN; }
-    }
-
+    setNaNs(data, acc->Deltas, qdata, quant.NaNFlag, f.Hd.ParticleLen);
     f.Data = data;
+
     return f;
 }
 
@@ -259,37 +264,29 @@ Field undoPosition(QField qf) {
 
     for (int i = 0; i < 3; i++) {
         undoFloat(
-            quant.X0[i], quant.X1[i],
-            quant.Depth, quant.Depths,
+            quant.X0[i], quant.X1[i], quant.Depth, quant.Depths,
             qdata, dimData[i], f.Hd.ParticleLen
         );
     }
 
     /* Set Acc. */
+
     PositionAccuracy *acc = calloc(1, sizeof(*acc));
     acc->Len = quant.Len;
-    if (!quant.Depths) {
-        acc->Delta = (quant.X1 - quant.X0) / (float) (1 << quant.Depth);
-    } else {
-        acc->Deltas = calloc((size_t) f.Hd.ParticleLen, sizeof(*acc->Deltas));
-        for (int32_t i = 0; i < f.Hd.ParticleLen; i++) {
-            acc->Deltas[i] = (quant.X1 - quant.X0) /
-                (float) (1 << quant.Depths[i]);
-        }
-    }
+    depthToDelta(
+        quant.Depth, quant.Depths, quant.X0[0], quant.X1[0],
+        &acc->Delta, &acc->Deltas, f.Hd.ParticleLen
+    );
     f.Acc = acc;
     
     /* Deal with partially invalid data. */
 
-    for (size_t i = 0; i < (size_t) f.Hd.ParticleLen; i++) {
-        if (qdata[i] == quant.NaNFlag) {
-            data[i] = NAN;
-            data[i + (size_t)f.Hd.ParticleLen] = NAN;
-            data[i + 2*(size_t)f.Hd.ParticleLen] = NAN;
-        }
-    }
-
+    int32_t len = f.Hd.ParticleLen;
+    setNaNs(data, acc->Deltas, qdata, quant.NaNFlag, len);
+    setNaNs(data + len, acc->Deltas, qdata, quant.NaNFlag, len);
+    setNaNs(data + 2*(size_t)len, acc->Deltas, qdata, quant.NaNFlag, len);
     f.Data = data;
+
     return f;
 }
 
@@ -334,32 +331,25 @@ Field undoVelocity(QField qf) {
     }
 
     /* Set Acc. */
+
     VelocityAccuracy *acc = calloc(1, sizeof(*acc));
     acc->SymLog10Threshold = quant.SymLog10Threshold;
     acc->Len = quant.Len;
     acc->SymLog10Scaled = quant.SymLog10Scaled;
-    if (!quant.Len) {
-        acc->Delta = (quant.X1 - quant.X0) / (float) (1 << quant.Depth);
-    } else {
-        acc->Deltas = calloc((size_t) f.Hd.ParticleLen, sizeof(*acc->Deltas));
-        for (int32_t i = 0; i < f.Hd.ParticleLen; i++) {
-            acc->Deltas[i] = (quant.X1 - quant.X0) /
-                (float) (1 << quant.Depths[i]);
-        }
-    }
+    depthToDelta(
+        quant.Depth, quant.Depths, quant.X0[0], quant.X1[0],
+        &acc->Delta, &acc->Deltas, f.Hd.ParticleLen
+    );
     f.Acc = acc;
     
     /* Deal with partially invalid data. */
 
-    for (size_t i = 0; i < (size_t) f.Hd.ParticleLen; i++) {
-        if (qdata[i] == quant.NaNFlag) {
-            data[i] = NAN;
-            data[i + (size_t)f.Hd.ParticleLen] = NAN;
-            data[i + 2*(size_t)f.Hd.ParticleLen] = NAN;
-        }
-    }
-
+    int32_t len = f.Hd.ParticleLen;
+    setNaNs(data, acc->Deltas, qdata, quant.NaNFlag, len);
+    setNaNs(data + len, acc->Deltas, qdata, quant.NaNFlag, len);
+    setNaNs(data + 2*(size_t)len, acc->Deltas, qdata, quant.NaNFlag, len);
     f.Data = data;
+
     return f;
 }
 
@@ -412,7 +402,7 @@ Field undoID(QField qf) {
     return f;
 }
 
-Field UndoUint(QField qf) {
+Field undoUint(QField qf) {
     /* Set things up. */
     Field f;
     memset(&f, 0, sizeof(f));
@@ -487,6 +477,43 @@ void undoFloat(
         for (int32_t i = 0; i < len; i++) {
             float dx = (x1 - x0) / (float) (1 << depths[i]);
             buf[i] = x0 + dx*((float)qdata[i] + rand_Float(state));
+        }
+    }
+}
+
+void depthToDelta(
+    uint8_t depth, uint8_t *depths,
+    float x0, float x1,
+    float *deltaPtr, float**deltasPtr,
+    int32_t len
+) {
+    if (!depths) {
+        *deltaPtr = (x1 - x0) / (float) (1 << depth);
+        *deltasPtr = NULL;
+        return;
+    }
+
+    float *deltas = calloc((size_t) len, sizeof(*deltas));
+    for (int32_t i = 0; i < len; i++) {
+        deltas[i] = (x1 - x0) / (float) (1 << depths[i]);
+    }
+
+    *deltasPtr = deltas;
+    *deltaPtr = 0;
+}
+
+void setNaNs(
+    float *data, float *deltas,
+    uint64_t *qdata, uint64_t nanFlag,
+    int32_t len
+) {
+    for (int32_t i = 0; i < len; i++) {
+        if (qdata[i] == nanFlag) { data[i] = NAN; }
+    }
+
+    if (deltas) {
+        for (int32_t i = 0; i < len; i++) {
+            if (qdata[i] == nanFlag) { data[i] = NAN; }
         }
     }
 }
