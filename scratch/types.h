@@ -30,9 +30,9 @@ typedef void *Accuracy;
 typedef struct FloatAccuracy {
     float *Deltas; /* NULL, if Len = 0. */
     float Delta;
-    float SymLogThreshold; /* Only meaningful is LogScaled = 2 */
+    float SymLog10Threshold; /* Only meaningful is Log10Scaled = 2 */
     int32_t Len;
-    int32_t LogScaled; /* 0 = not log scaled
+    int32_t Log10Scaled; /* 0 = not log scaled
                           1 = log10 scaled
                           2 = symlog10 scaled */
 } FloatAccuracy;
@@ -49,9 +49,9 @@ typedef struct VelocityAccuracy {
     float *Deltas; /* NULL, if Len = 0. */
     float Delta;
     int32_t Len;
-    int32_t SymLogScaled; /* Velocities can only be symlog10 scaled
+    int32_t SymLog10Scaled; /* Velocities can only be symlog10 scaled
                              since they're signed. */
-    float SymLogThreshold; /* Only meaningful if SymLogScaled != 0 */
+    float SymLog10Threshold; /* Only meaningful if SymLogScaled != 0 */
 } VelocityAccuracy;
 
 typedef struct IDAccuracy {
@@ -70,10 +70,10 @@ typedef void *Quantization;
  * to help with alignment). */
 typedef struct FloatQuantization {
     uint8_t *Depths;
-    uint8_t Depth;
-    int32_t Len;
     uint64_t NaNFlag;
-    float X0, X1;
+    int32_t Len, Log10Scaled;
+    float SymLog10Threshold, X0, X1;
+    uint8_t Depth;
 } FloatQuantization;
 
 typedef struct IntQuantization {
@@ -82,18 +82,19 @@ typedef struct IntQuantization {
 
 typedef struct PositionQuantization {
     uint8_t *Depths;
-    uint8_t Depth;
-    int32_t Len;
     uint64_t NaNFlag;
+    int32_t Len;
     float X0[3], X1[3];
+    uint8_t Depth;
 } PositionQuantization;
 
 typedef struct VelocityQuantization {
     uint8_t *Depths;
-    uint8_t Depth;
-    int32_t Len;
     uint64_t NaNFlag;
+    int32_t Len, SymLog10Scaled;
     float X0[3], X1[3];
+    float SymLog10Threshold;
+    uint8_t Depth;
 } VelocityQuantization;
 
 typedef struct IDQuantization {

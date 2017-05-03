@@ -241,7 +241,7 @@ Seg getSegment(void) {
     s.Fields[0].Hd = vHd;
     s.Fields[0].Data = v;
     VelocityAccuracy vAcc = { .Deltas = NULL, .Delta = 1,
-                              .Len = 0, .SymLogThreshold = false };
+                              .Len = 0, .SymLog10Threshold = false };
     s.Fields[1].Acc = calloc(1, sizeof(vAcc));
     *(VelocityAccuracy*)s.Fields[1].Acc = vAcc;
 
