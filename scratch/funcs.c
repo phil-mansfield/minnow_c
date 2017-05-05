@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "register.h"
 #include "funcs.h"
@@ -27,7 +28,10 @@ Seg UndoQuantize(QSeg qs) {
     s.Fields = calloc((size_t)s.FieldLen, sizeof(s.Fields[0]));
 
     for (int32_t i = 0; i < s.FieldLen; i++) {
-        s.Fields[i] = quant_Field(qs.Fields[i]);
+        if (qs.Fields[i].Valid) {
+            s.Fields[i] = quant_Field(qs.Fields[i]);
+            s.Fields[i].Valid = true;
+        }
     }
 
     return s;
@@ -45,10 +49,10 @@ QSeg Decompress(CSeg cs, Decompressor *decomps) {
         uint32_t checksum = util_Checksum(
             U8BigSeq_WrapArray(cf->Data, cf->DataLen)
         );
-        if (checksum == cf->Checksum || decomps[i].NaNFlag) {
+
+        if (checksum == cf->Checksum) {
             *qf = decomps[i].DFunc(*cf, decomps[i].Buffer);
-        } else {
-            memcpy(&qf->Hd, &qf->Hd, sizeof(qf->Hd));
+            qf->Valid = true;
         }
     }
 
@@ -229,7 +233,7 @@ Seg getSegment(void) {
     s.Fields[0].Hd = xHd;
     s.Fields[0].Data = x;
     PositionAccuracy xAcc = { .Deltas = NULL, .Delta = (float) 1e-3,
-                              .BoxWidth = 64, .Len = 0 };
+                              .Width = 64, .Len = 0 };
     s.Fields[0].Acc = calloc(1, sizeof(xAcc));
     *(PositionAccuracy*)s.Fields[0].Acc = xAcc;
 

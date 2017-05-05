@@ -41,7 +41,7 @@ typedef uint8_t IntAccuracy; /* Does nothing. */
 
 typedef struct PositionAccuracy {
     float *Deltas; /* NULL, if Len = 0. */
-    float Delta, BoxWidth;
+    float Delta, Width;
     int32_t Len;
 } PositionAccuracy;
 
@@ -70,27 +70,24 @@ typedef void *Quantization;
  * to help with alignment). */
 typedef struct FloatQuantization {
     uint8_t *Depths;
-    uint64_t NaNFlag;
     int32_t Len, Log10Scaled;
     float SymLog10Threshold, X0, X1;
     uint8_t Depth;
 } FloatQuantization;
 
 typedef struct IntQuantization {
-    uint64_t NaNFlag, X0, X1;
+    uint64_t X0, X1;
 } IntQuantization;
 
 typedef struct PositionQuantization {
     uint8_t *Depths;
-    uint64_t NaNFlag;
     int32_t Len;
-    float X0[3], X1[3];
+    float Width, X0[3], X1[3];
     uint8_t Depth;
 } PositionQuantization;
 
 typedef struct VelocityQuantization {
     uint8_t *Depths;
-    uint64_t NaNFlag;
     int32_t Len, SymLog10Scaled;
     float X0[3], X1[3];
     float SymLog10Threshold;
@@ -98,8 +95,7 @@ typedef struct VelocityQuantization {
 } VelocityQuantization;
 
 typedef struct IDQuantization {
-    uint64_t NaNFlag, Width;
-    uint64_t X0[3], X1[3];
+    uint64_t Width, X0[3], X1[3];
 } IDQuantization;
 
 /* Fields */
@@ -113,12 +109,14 @@ typedef struct FieldHeader {
 
 typedef struct Field {
     FieldHeader Hd;
+    int64_t Valid;
     void *Data;
     Accuracy Acc;
 } Field;
 
 typedef struct QField {
     FieldHeader Hd;
+    int64_t Valid;
     uint64_t *Data;
     Quantization Quant;
 } QField;
@@ -140,9 +138,6 @@ typedef CField (*CFunc)(QField, void*);
 typedef struct Decompressor {
     void *Buffer;
     DFunc DFunc;
-    uint64_t NaNFlag; /* If NaNFlag == 0, it's assumed that the decompressor
-                       * cannot paritally recover and all values will just be
-                       * set to NaN on checksum failure. */
 } Decompressor;
 
 typedef struct Compressor {
