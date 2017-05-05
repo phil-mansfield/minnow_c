@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "types.h"
-#include "../src/seq.h"
+#include "seq.h"
 
 typedef struct Register {
     U32Seq Algo;

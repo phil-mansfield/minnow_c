@@ -3,10 +3,10 @@
 #include <time.h>
 
 #include "quant.h"
-#include "../src/debug.h"
-#include "../src/rand.h"
-#include "../src/seq.h"
-#include "../src/util.h"
+#include "debug.h"
+#include "rand.h"
+#include "seq.h"
+#include "util.h"
 
 /************************/
 /* forward declarations */
@@ -219,6 +219,7 @@ QField position(Field f) {
         FSeq_Free(xDim[i]);
     }
 
+    qf.Data = qdata;
     return qf;
 }
 
@@ -283,6 +284,7 @@ QField velocity(Field f) {
         unmapFloat(vDim[i], flag);
     }
 
+    qf.Data = qdata;
     return qf;
 }
 
@@ -364,6 +366,7 @@ QField ufloat(Field f) {
     /* Clean up */
     unmapFloat(data, acc->Log10Scaled);
 
+    qf.Data = qdata.Data;
     return qf;
 }
 
@@ -390,6 +393,7 @@ QField uint(Field f) {
     quant->X0 = x0;
     quant->X1 = x1;
 
+    qf.Data = qdata;
     return qf;
 }
 

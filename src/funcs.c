@@ -5,10 +5,10 @@
 #include "register.h"
 #include "funcs.h"
 #include "quant.h"
-#include "../src/debug.h"
-#include "../src/util.h"
-#include "../src/stream.h"
-#include "../src/semver.h"
+#include "debug.h"
+#include "util.h"
+#include "stream.h"
+#include "semver.h"
 
 QSeg Quantize(Seg s) {
     QSeg qs;

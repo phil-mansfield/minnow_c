@@ -2,7 +2,7 @@
 #define FUNCS_H_
 
 #include "types.h"
-#include "../src/seq.h"
+#include "seq.h"
 
 /* TODO: Figure out whether or not vectorization here is the
  * corect API choice. */

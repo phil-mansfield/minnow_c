@@ -13,6 +13,7 @@
 void checkBinIndexRange(FSeq x, float x0, float dx);
 U8Seq U8SeqSetLen(U8Seq buf, int32_t len);
 U32Seq U32SeqSetLen(U32Seq buf, int32_t len);
+U64Seq U64SeqSetLen(U64Seq buf, int32_t len);
 FSeq FSeqSetLen(FSeq buf, int32_t len);
 bool littleEndian();
 
@@ -207,7 +208,7 @@ FSeq util_UndoBinIndex(
     for (int32_t i = 0; i < idx.Len; i++) {
         uint64_t bins = (1 << (uint64_t) level.Data[i]);
         DebugAssert(idx.Data[i] < bins) {
-            Panic("At index %d, idx = %"PRIu32", which is >= to "
+            Panic("At index %"PRId32", idx = %"PRIu64", which is >= to "
                   "the level, 2^%"PRIu8".", i, idx.Data[i], level.Data[i]);
         }
 
@@ -229,7 +230,7 @@ FSeq util_UndoUniformBinIndex(
 
     for (int32_t i = 0; i < idx.Len; i++) {
         DebugAssert(idx.Data[i] < bins) {
-            Panic("At index %d, idx = %"PRIu32", which is >= to "
+            Panic("At index %"PRId32", idx = %"PRIu64", which is >= to "
                   "the level, 2^%"PRIu8".", i, idx.Data[i], level);
         }
 
@@ -525,6 +526,12 @@ U8Seq U8SeqSetLen(U8Seq buf, int32_t len) {
 U32Seq U32SeqSetLen(U32Seq buf, int32_t len) {
     buf = U32Seq_Extend(buf, len);
     buf = U32Seq_Sub(buf, 0, len);
+    return buf;
+}
+
+U64Seq U64SeqSetLen(U64Seq buf, int32_t len) {
+    buf = U64Seq_Extend(buf, len);
+    buf = U64Seq_Sub(buf, 0, len);
     return buf;
 }
 
