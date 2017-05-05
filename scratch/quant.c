@@ -159,10 +159,67 @@ Field quant_Field(QField qf) {
 /**************************/
 
 QField position(Field f) {
-    (void) f;
-    
-    QField dummy;
-    return dummy;
+    /* Set things up. */
+    QField qf;
+    memset(&qf, 0, sizeof(f));
+    memcpy(&qf.Hd, &f.Hd, sizeof(f.Hd));
+
+    int32_t len = f.Hd.ParticleLen;
+    PositionAccuracy *acc = f.Acc;
+    PositionQuantization *quant = calloc(1, sizeof(*quant));
+    FSeq x = FSeq_WrapArray((float*)f.Data, len);
+    FSeq y = FSeq_WrapArray((float*)f.Data + len, len);
+    FSeq z = FSeq_WrapArray((float*)f.Data + 2*(size_t)len, len);
+    uint64_t *qdata = calloc((size_t)len, sizeof(*qdata));
+    U64Seq qx = U64Seq_WrapArray(qdata, len);
+    U64Seq qy = U64Seq_WrapArray(qdata + len, len);
+    U64Seq qz = U64Seq_WrapArray(qdata + 2*(size_t)len, len);
+    FSeq xDim[3] = { x, y, z };
+    U64Seq qDim[3] = { qx, qy, qz };
+
+    /* Quantize */
+    float maxDiff = 0;
+    for (int i = 0; i < 3; i++) {
+        FSeq buf = FSeq_New(len);
+        memcpy(buf.Data, xDim[i].Data, sizeof(buf.Data)*(size_t)len);
+        util_UndoPeriodic(buf, acc->Width);
+        xDim[i] = buf;
+
+        util_MinMax(xDim[i], &quant->X0[i], &quant->X1[i]);
+        if (maxDiff < quant->X1[i] - quant->X0[i]) {
+            maxDiff = quant->X1[i] - quant->X0[i];
+        }
+    }
+
+    uint8_t depth, *depths;
+    deltaToDepth(acc->Delta, acc->Deltas, quant->X0[0],
+                 quant->X0[0] + maxDiff, &depth, &depths, len);
+
+    for (int i = 0; i < 3; i++) {
+        if (depths == NULL) {
+            qDim[i] = util_UniformBinIndex(
+                xDim[i], depth, quant->X0[i], maxDiff, qDim[i]
+            );
+        } else {
+            U8Seq depthsSeq = U8Seq_WrapArray(depths, len);
+            qDim[i] = util_BinIndex(
+                xDim[i], depthsSeq, quant->X0[i], maxDiff, qDim[i]
+            );
+        }
+    }
+
+    /* Initialize  */
+    quant->Depths = depths;
+    quant->Depth = depth;
+    quant->Len = acc->Len;
+    quant->Width = acc->Width;
+
+    /* Clean up */
+    for (int i = 0; i < 3; i++) {
+        FSeq_Free(xDim[i]);
+    }
+
+    return qf;
 }
 
 QField velocity(Field f) {
@@ -230,10 +287,41 @@ QField velocity(Field f) {
 }
 
 QField id(Field f) {
-    (void) f;
-    
-    QField dummy;
-    return dummy;
+    /* Set things up. */
+    QField qf;
+    memset(&qf, 0, sizeof(f));
+    memcpy(&qf.Hd, &f.Hd, sizeof(f.Hd));
+
+    int32_t len = f.Hd.ParticleLen;
+    IDAccuracy *acc = f.Acc;
+    IDQuantization *quant = calloc(1, sizeof(*quant));
+    uint64_t *data = f.Data;
+    uint64_t *qdata = calloc(3 * (size_t) len, sizeof(*qdata));
+    U64Seq qx = U64Seq_WrapArray(qdata, len);
+    U64Seq qy = U64Seq_WrapArray(qdata + len, len);
+    U64Seq qz = U64Seq_WrapArray(qdata + 2*(size_t)len, len);
+    U64Seq qDim[3] = { qx, qy, qz };
+
+    /* Quantize */
+    for (int32_t i = 0; i < len; i++) {
+        qx.Data[i] = data[i] % acc->Width;
+        qy.Data[i] = (data[i] / acc->Width) % acc->Width;
+        qz.Data[i] = data[i] / (acc->Width * acc->Width);
+    }
+
+    for (int j = 0; j < 3; j++) {
+        util_U64UndoPeriodic(qDim[j], acc->Width);
+        util_U64MinMax(qDim[j], &quant->X0[j], &quant->X1[j]);
+        for (int32_t i = 0; i < len; i++) {
+            qDim[j].Data[i] -= quant->X0[j];
+        }
+    }
+
+    /* Initialize  */
+    quant->Width = acc->Width;
+
+    qf.Data = qdata;
+    return qf;
 }
 
 QField ufloat(Field f) {
@@ -294,7 +382,7 @@ QField uint(Field f) {
     /* Quantize */
     uint64_t x0, x1;
     util_U64MinMax(U64Seq_WrapArray(data, len), &x0, &x1);
-    memcpy(qdata, data, sizeof(*data) * (size_t) len);
+    memcpy(qdata, data, sizeof(*data) * (size_t)len);
     for (int32_t i = 0; i < len; i++) { qdata[i] -= x0; }
 
     /* Initialize  */
