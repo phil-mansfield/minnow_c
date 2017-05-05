@@ -44,16 +44,16 @@ void util_MinMax(FSeq x, float *minPtr, float *maxPtr) {
     *minPtr = min;
 }
 
-void util_U32MinMax(U32Seq x, uint32_t *minPtr, uint32_t *maxPtr) {
-    int32_t n = x.Len;
-    uint32_t *xs = x.Data;
+void util_U64MinMax(U64Seq x, uint64_t *minPtr, uint64_t *maxPtr) {
+    int64_t n = x.Len;
+    uint64_t *xs = x.Data;
 
     DebugAssert(n > 0) {
         Panic("Empty sequence given to util_MinMax.%s", "");
     }
 
-    uint32_t min = xs[0];
-    uint32_t max = xs[0];
+    uint64_t min = xs[0];
+    uint64_t max = xs[0];
 
     for (int32_t i = 1; i < n; i++) {
         /* not using else if allows these to be converted into maxss and
@@ -82,15 +82,14 @@ void util_Periodic(FSeq x, float L) {
     }
 }
 
-void util_U32Periodic(U32Seq x, uint32_t L) {
+void util_U64Periodic(U64Seq x, uint64_t L) {
     /* This is a hot inner loop for some algorithms. */
 
     int32_t n = x.Len;
-    uint32_t *xs = x.Data;
+    uint64_t *xs = x.Data;
 
     for (int32_t i = 0; i < n; i++) {
-        uint32_t val = xs[i];
-        if (val >= L) { xs[i] -= L; }
+        if (xs[i] >= L) { xs[i] -= L; }
     }
 }
 
@@ -112,17 +111,17 @@ void util_UndoPeriodic(FSeq x, float L) {
     }
 }
 
-void util_U32UndoPeriodic(U32Seq x, uint32_t L) {
-    DebugAssert(INT32_MAX/2 > L) {
-        Panic("L range of %"PRIu32" not supported by util_U32UndoPeriodic.", L);
+void util_U64UndoPeriodic(U64Seq x, uint64_t L) {
+    DebugAssert(INT64_MAX/2 > L) {
+        Panic("L range of %"PRIu64" not supported by util_U32UndoPeriodic.", L);
     }
 
     if (x.Len == 0) { return; }
 
     int32_t n = x.Len;
-    int32_t *xs = (int32_t*)x.Data;
-    int32_t x0 = xs[0];
-    int32_t iL = (int32_t) L;
+    int64_t *xs = (int64_t*)x.Data;
+    int64_t x0 = xs[0];
+    int64_t iL = (int64_t) L;
 
     for (int32_t i = 1; i < n; i++) {
         if (xs[i] - x0 >= iL/2) {
@@ -132,7 +131,7 @@ void util_U32UndoPeriodic(U32Seq x, uint32_t L) {
         }
     }
 
-    int32_t min = x0;
+    int64_t min = x0;
     for (int32_t i = 1; i < n; i++) {
         if (xs[i] < min) { min = xs[i]; }
     }
@@ -142,18 +141,18 @@ void util_U32UndoPeriodic(U32Seq x, uint32_t L) {
     }
 }
 
-U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
+U64Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U64Seq buf) {
     DebugAssert(x.Len == level.Len) {
         Panic("BinIndex given x with length %"PRId32", but level with length %"
               PRId32".", x.Len, level.Len);
     }
 
-    buf = U32SeqSetLen(buf, x.Len);
+    buf = U64SeqSetLen(buf, x.Len);
     
     for (int32_t i = 0; i < x.Len; i++) {
-        DebugAssert(level.Data[i] <= 32) {
+        DebugAssert(level.Data[i] <= 64) {
             Panic("level[%"PRId32"] set to %"PRIu8", which is above the "
-                  "limit of 32.", i, level.Data[i]);
+                  "limit of 64.", i, level.Data[i]);
         }
 
         float delta = (x.Data[i] - x0) / dx;
@@ -170,15 +169,15 @@ U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf) {
 }
 
 
-U32Seq util_UniformBinIndex(
-    FSeq x, uint8_t level, float x0, float dx, U32Seq buf
+U64Seq util_UniformBinIndex(
+    FSeq x, uint8_t level, float x0, float dx, U64Seq buf
 ) {
-    DebugAssert(level <= 32) {
+    DebugAssert(level <= 64) {
         Panic("level set to %"PRIu8", which is above the "
-              "limit of 32.", level);
+              "limit of 64.", level);
     }
 
-    buf = U32SeqSetLen(buf, x.Len);
+    buf = U64SeqSetLen(buf, x.Len);
     
     float numBins = (float) (1 << level);
     for (int32_t i = 0; i < x.Len; i++) {
@@ -196,7 +195,7 @@ U32Seq util_UniformBinIndex(
 }
 
 FSeq util_UndoBinIndex(
-    U32Seq idx, U8Seq level, float x0, float dx, rand_State *state, FSeq buf
+    U64Seq idx, U8Seq level, float x0, float dx, rand_State *state, FSeq buf
 ) {
     DebugAssert(idx.Len == level.Len) {
         Panic("UndoBinIndex given idx with length %"PRId32", but level with "
@@ -206,7 +205,7 @@ FSeq util_UndoBinIndex(
     buf = FSeqSetLen(buf, idx.Len);
 
     for (int32_t i = 0; i < idx.Len; i++) {
-        uint32_t bins = (1 << (uint32_t) level.Data[i]);
+        uint64_t bins = (1 << (uint64_t) level.Data[i]);
         DebugAssert(idx.Data[i] < bins) {
             Panic("At index %d, idx = %"PRIu32", which is >= to "
                   "the level, 2^%"PRIu8".", i, idx.Data[i], level.Data[i]);
@@ -221,11 +220,11 @@ FSeq util_UndoBinIndex(
 }
 
 FSeq util_UndoUniformBinIndex(
-    U32Seq idx, uint8_t level, float x0, float dx, rand_State *state, FSeq buf
+    U64Seq idx, uint8_t level, float x0, float dx, rand_State *state, FSeq buf
 ) {
 
     buf = FSeqSetLen(buf, idx.Len);
-    uint32_t bins = 1 << (uint32_t) level;
+    uint64_t bins = 1 << (uint64_t) level;
     float binWidth = dx / ((float) bins);
 
     for (int32_t i = 0; i < idx.Len; i++) {
