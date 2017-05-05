@@ -23,7 +23,7 @@ void util_U64Periodic(U64Seq x, uint64_t L);
 /* util_UndoPeriodic reverses a call to Periodic so that all all values are 
  * within a contiguous range. */
 void util_UndoPeriodic(FSeq x, float L);
-void util_U32UndoPeriodic(U32Seq x, uint32_t L);
+void util_U64UndoPeriodic(U64Seq x, uint64_t L);
 
 /* util_BinIndex returns the bin indices of a sequence of floats, x, 
  * within the range [x0, x0 + dx) with bin width dx/(2^level[i]). A buffer
