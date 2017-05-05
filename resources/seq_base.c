@@ -48,6 +48,18 @@ ExSeq ExSeq_FromArray(Example *data, int32_t len) {
     return s;
 }
 
+ExSeq ExSeq_WrapArray(Example *data, int32_t len) {
+    DebugAssert(len >= 0) {
+        Panic("ExSeq_WrapArray given negative length, %"PRId32".", len);
+    }
+    DebugAssert(data || (len != 0)) {
+        Panic("ExSeq_WrapArray given non-zero lenght for NULL pointer.%s", "");
+    }
+
+    ExSeq s = { .Data = data, .Len = len, .Cap = len };
+    return s;
+}
+
 ExSeq ExSeq_NewWithCap(int32_t len, int32_t cap) {
     DebugAssert(len >= 0) {
         Panic("ExSeq_NewWithCap given negative length, %"PRId32".", len);
@@ -198,6 +210,19 @@ ExBigSeq ExBigSeq_FromArray(Example *data, int64_t len) {
     }
     return s;
 }
+
+ExBigSeq ExBigSeq_WrapArray(Example *data, int64_t len) {
+    DebugAssert(len >= 0) {
+        Panic("ExSeq_WrapArray given negative length, %"PRId64".", len);
+    }
+    DebugAssert(data || (len != 0)) {
+        Panic("ExSeq_WrapArray given non-zero lenght for NULL pointer.%s", "");
+    }
+
+    ExBigSeq s = { .Data = data, .Len = len, .Cap = len };
+    return s;
+}
+
 
 ExBigSeq ExBigSeq_NewWithCap(int64_t len, int64_t cap) {
     DebugAssert(len >= 0) {

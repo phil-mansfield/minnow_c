@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-const int semver_BUF_SIZE = 15;
+#define semver_BUF_SIZE 15
 
 enum semver_Stage {
     semver_DEV,

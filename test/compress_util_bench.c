@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "bench.h"
-#include "compress_util.h"
+#include "util.h"
 #include "rand.h"
 #include "seq.h"
 

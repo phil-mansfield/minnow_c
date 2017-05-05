@@ -37,4 +37,11 @@
 *.dSYM/
 *.su
 
+# Latex nonsense
+*.pdf
+_minted*/
+*.aux
+*.log
+*Notes.bib
+
 plots/

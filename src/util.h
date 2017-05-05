@@ -12,18 +12,18 @@
 
 /* util_MinMax computes the minimum and maximum of a sequence. */
 void util_MinMax(FSeq x, float *minPtr, float *maxPtr);
-void util_U32MinMax(U32Seq x, uint32_t *minPtr, uint32_t *maxPtr);
+void util_U64MinMax(U64Seq x, uint64_t *minPtr, uint64_t *maxPtr);
 
 /* util_Periodic applies periodic boundary conditions of length L to a
  * sequence. It assumes that all points are no more than a distance L outside
  * of the range. */
 void util_Periodic(FSeq x, float L);
-void util_U32Periodic(U32Seq x, uint32_t L);
+void util_U64Periodic(U64Seq x, uint64_t L);
 
 /* util_UndoPeriodic reverses a call to Periodic so that all all values are 
  * within a contiguous range. */
 void util_UndoPeriodic(FSeq x, float L);
-void util_U32UndoPeriodic(U32Seq x, uint32_t L);
+void util_U64UndoPeriodic(U64Seq x, uint64_t L);
 
 /* util_BinIndex returns the bin indices of a sequence of floats, x, 
  * within the range [x0, x0 + dx) with bin width dx/(2^level[i]). A buffer
@@ -36,11 +36,11 @@ void util_U32UndoPeriodic(U32Seq x, uint32_t L);
  *
  * The BinIndex functions are the only steps in any Minnow encoding algorithm
  * which lose information. */
-U32Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U32Seq buf);
+U64Seq util_BinIndex(FSeq x, U8Seq level, float x0, float dx, U64Seq buf);
 /* util_UniformBinIndex is identical to util_BinIndex, but uses the same value
  * of level for every element of x. */
-U32Seq util_UniformBinIndex(
-    FSeq x, uint8_t level, float x0, float dx, U32Seq buf
+U64Seq util_UniformBinIndex(
+    FSeq x, uint8_t level, float x0, float dx, U64Seq buf
 );
 
 /* util_UndoBinIndex reverses the results of a call to util_BinIndex. The
@@ -52,10 +52,10 @@ U32Seq util_UniformBinIndex(
  * The UndoBinIndex functions are the only steps in any Minnow decoding
  * algorithm which lose information. */
 FSeq util_UndoBinIndex(
-    U32Seq idx, U8Seq level, float x0, float dx, rand_State *state, FSeq buf
+    U64Seq idx, U8Seq level, float x0, float dx, rand_State *state, FSeq buf
 );
 FSeq util_UndoUniformBinIndex(
-    U32Seq idx, uint8_t level, float x0, float dx, rand_State *state, FSeq buf
+    U64Seq idx, uint8_t level, float x0, float dx, rand_State *state, FSeq buf
 );
 
 /* utilU32TransposeBytes transforms an integer seqeunce into a byte sequence
@@ -115,14 +115,24 @@ U8Seq util_UndoEntropyEncode(
 );
 
 /* util_Checksum computes a 64-bit BSD-style CRC checksum. */
-uint32_t util_Checksum(U8Seq bytes);
+uint32_t util_Checksum(U8BigSeq bytes);
 
 /* util_*LittleEndian converts a sequence from native byte ordering into a
  * little endian format and util_*UndoLittleEndian converts back. */
 uint32_t util_U32LittleEndian(uint32_t x);
 int32_t util_I32LittleEndian(int32_t x);
 
+uint64_t util_U64LittleEndian(uint64_t x);
+int64_t util_I64LittleEndian(int64_t x);
+
+float util_FLittleEndian(float x);
+
 uint32_t util_U32UndoLittleEndian(uint32_t x);
 int32_t util_I32UndoLittleEndian(int32_t x);
+
+uint64_t util_U64UndoLittleEndian(uint64_t x);
+int64_t util_I64UndoLittleEndian(int64_t x);
+
+float util_FUndoLittleEndian(float x);
 
 #endif /* MNW_COMPRESS_UTIL_H_ */

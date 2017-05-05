@@ -1,7 +1,7 @@
 #include "algo.h"
 #include "seq.h"
 #include "rand.h"
-#include "compress_util.h"
+#include "util.h"
 
 #include <assert.h>
 #include <string.h>

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "compress_util.h"
+#include "util.h"
 #include "seq.h"
 #include "rand.h"
 
@@ -674,7 +674,9 @@ bool testLittleEndian() {
     for (int i = 0; i < LEN(tests32); i++) {
         U32Seq in = U32Seq_FromArray(tests32[i].in, 2);
         U32Seq out = U32Seq_FromArray(tests32[i].out, 2);
-        util_U32LittleEndian(in);
+        for (int32_t j = 0; j < in.Len; j++) {
+            out.Data[j] = util_U32LittleEndian(in.Data[j]);
+        }
 
         if (!U32SeqEqual(in, out)) {
             fprintf(stderr, "For test %d of 32 bit testLittleEndian, got ", i);
@@ -705,7 +707,9 @@ bool testLittleEndian() {
     for (int i = 0; i < LEN(tests64); i++) {
         U64Seq in = U64Seq_FromArray(tests64[i].in, 2);
         U64Seq out = U64Seq_FromArray(tests64[i].out, 2);
-        util_U64LittleEndian(in);
+        for (int32_t j = 0; j < in.Len; j++) {
+            out.Data[j] = util_U64LittleEndian(in.Data[j]);
+        }
 
         if (!U64SeqEqual(in, out)) {
             fprintf(stderr, "For test %d of 64 bit testLittleEndian, got ", i);

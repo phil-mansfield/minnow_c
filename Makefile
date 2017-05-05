@@ -10,7 +10,7 @@
 # projects. I wholeheartedly encourage you to do this. To use for a new
 # project, go to the commented areas in this file and do what# # they say.
 
-CLANG_CFLAGS=-Werror -Weverything -Wno-unused-macros -Wno-missing-prototypes -Wno-bad-function-cast -Wno-float-equal -Wno-padded -std=c99 -pedantic -g -D DEBUG  -O2
+CLANG_CFLAGS=-Werror -Weverything -Wno-unused-macros -Wno-missing-prototypes -Wno-bad-function-cast -Wno-float-equal -Wno-padded -Wno-missing-noreturn -std=c99 -pedantic -g -D DEBUG  -O2
 
 GCC_CFLAGS= -O2 -Wall -Wextra -Werror -std=c99 -pedantic -Wshadow -Wcast-qual -Wcast-align -Wundef -Wredundant-decls -Wmissing-include-dirs -g -D DEBUG
 
@@ -91,8 +91,8 @@ src/base_seq.h: scripts/seq_gen.py Makefile resources/seq_base.h
 src/seq.o: src/base_seq.h
 lz4/lib/lz4.o:
 	$(CC) -O3 -std=c99 -Wall -Wextra -c lz4/lib/lz4.c -o lz4/lib/lz4.o
-src/compress_util.o: src/compress_util.c src/compress_util.h
-	$(CC) -I lz4/lib $(CFLAGS) -c src/compress_util.c -o src/compress_util.o
+src/util.o: src/util.c src/util.h
+	$(CC) -I lz4/lib $(CFLAGS) -c src/util.c -o src/util.o
 %.o: %.c %.h Makefile
 	$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDES_WITH_FLAG)
 
